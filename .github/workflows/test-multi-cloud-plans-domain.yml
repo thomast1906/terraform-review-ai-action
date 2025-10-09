@@ -18,6 +18,8 @@ jobs:
   azure-review:
     name: '☁️ Azure Plan Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Checkout Repository
@@ -48,6 +50,8 @@ jobs:
   aws-review:
     name: '☁️ AWS Plan Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Checkout Repository
@@ -77,6 +81,8 @@ jobs:
   gcp-review:
     name: '☁️ GCP Plan Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Checkout Repository
@@ -106,6 +112,8 @@ jobs:
   other-providers-review:
     name: '🔧 Other Providers Plan Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Checkout Repository

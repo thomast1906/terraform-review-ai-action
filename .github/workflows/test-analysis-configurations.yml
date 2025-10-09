@@ -18,6 +18,8 @@ jobs:
   preset-security-audit:
     name: '🔒 Preset: Security Audit'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -48,6 +50,8 @@ jobs:
   preset-cost-optimisation:
     name: '💰 Preset: Cost Optimization'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -78,6 +82,8 @@ jobs:
   preset-production-ready:
     name: '🚀 Preset: Production Ready'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -108,6 +114,8 @@ jobs:
   preset-quick-check:
     name: '⚡ Preset: Quick Check'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -138,6 +146,8 @@ jobs:
   preset-complete:
     name: '📋 Preset: Complete Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -169,6 +179,8 @@ jobs:
   depth-quick:
     name: '⚡ Depth: Quick (~4k tokens)'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -198,6 +210,8 @@ jobs:
   depth-standard:
     name: '📊 Depth: Standard (~8k tokens)'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -228,6 +242,8 @@ jobs:
   depth-detailed:
     name: '🔍 Depth: Detailed (~12k tokens)'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -259,6 +275,8 @@ jobs:
   style-severity:
     name: '🎯 Style: Severity-Based'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -289,6 +307,8 @@ jobs:
   style-domain:
     name: '📁 Style: Domain-Based'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -320,6 +340,8 @@ jobs:
   mode-plan-only:
     name: '📄 Mode: Plan-Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -350,6 +372,8 @@ jobs:
   mode-comprehensive:
     name: '📚 Mode: Comprehensive'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -383,6 +407,8 @@ jobs:
   focus-security-only:
     name: '🔐 Focus: Security Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -414,6 +440,8 @@ jobs:
   focus-cost-performance:
     name: '💸 Focus: Cost & Performance'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -445,6 +473,8 @@ jobs:
   focus-reliability-observability:
     name: '📡 Focus: Reliability & Observability'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -475,6 +505,8 @@ jobs:
   focus-networking-data:
     name: '🌐 Focus: Networking & Data'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -506,6 +538,8 @@ jobs:
   focus-compliance-governance:
     name: '⚖️ Focus: Compliance & Governance'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -538,6 +572,8 @@ jobs:
   focus-deployment-only:
     name: '🚀 Focus: Deployment Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -569,6 +605,8 @@ jobs:
   focus-best-practices-only:
     name: '✨ Focus: Best Practices Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -599,6 +637,8 @@ jobs:
   focus-compliance-only:
     name: '📋 Focus: Compliance Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -630,6 +670,8 @@ jobs:
   focus-performance-only:
     name: '⚡ Focus: Performance Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -661,6 +703,8 @@ jobs:
   focus-governance-only:
     name: '🏛️ Focus: Governance Only'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -692,6 +736,8 @@ jobs:
   mcp-enabled-detailed:
     name: '🔧 MCP: Enabled with Details'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -722,6 +768,8 @@ jobs:
   mcp-disabled:
     name: '🚫 MCP: Disabled'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -752,6 +800,8 @@ jobs:
   scenario-fast-cicd:
     name: '⚡ Scenario: Fast CI/CD Pipeline'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -782,6 +832,8 @@ jobs:
   scenario-security-audit:
     name: '🔒 Scenario: Security Audit'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -814,6 +866,8 @@ jobs:
   scenario-cost-review:
     name: '💰 Scenario: Cost Review'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -844,6 +898,8 @@ jobs:
   scenario-pre-production:
     name: '🎯 Scenario: Pre-Production Gate'
     runs-on: ubuntu-latest
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v5
@@ -906,7 +962,8 @@ jobs:
       - scenario-cost-review
       - scenario-pre-production
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && always()
+    # Skip for Dependabot and Renovate PRs, only run on pull requests
+    if: github.event_name == 'pull_request' && always() && github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Download All Analyses
