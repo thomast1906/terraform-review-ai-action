@@ -1,0 +1,774 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "datadog_monitor.cpu_monitor",
+          "mode": "managed",
+          "type": "datadog_monitor",
+          "name": "cpu_monitor",
+          "provider_name": "registry.terraform.io/datadog/datadog",
+          "values": {
+            "name": "High CPU Usage Alert",
+            "type": "metric alert",
+            "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
+            "message": "CPU usage is above 90% on {{host.name}}",
+            "tags": ["team:devops", "env:production"],
+            "notify_no_data": true,
+            "no_data_timeframe": 20,
+            "renotify_interval": 60,
+            "escalation_message": "CPU usage is still high!",
+            "priority": 1
+          }
+        },
+        {
+          "address": "datadog_dashboard.main",
+          "mode": "managed",
+          "type": "datadog_dashboard",
+          "name": "main",
+          "provider_name": "registry.terraform.io/datadog/datadog",
+          "values": {
+            "title": "Production Infrastructure Dashboard",
+            "description": "Main monitoring dashboard for production",
+            "layout_type": "ordered",
+            "is_read_only": false,
+            "notify_list": ["admin@example.com"],
+            "tags": ["terraform", "production"]
+          }
+        },
+        {
+          "address": "vault_mount.kvv2",
+          "mode": "managed",
+          "type": "vault_mount",
+          "name": "kvv2",
+          "provider_name": "registry.terraform.io/hashicorp/vault",
+          "values": {
+            "path": "secret",
+            "type": "kv-v2",
+            "description": "KV Version 2 secret engine mount",
+            "default_lease_ttl_seconds": 3600,
+            "max_lease_ttl_seconds": 86400
+          }
+        },
+        {
+          "address": "vault_generic_secret.db_password",
+          "mode": "managed",
+          "type": "vault_generic_secret",
+          "name": "db_password",
+          "provider_name": "registry.terraform.io/hashicorp/vault",
+          "values": {
+            "path": "secret/data/database",
+            "data_json": "{\"password\":\"super-secret-password\",\"username\":\"admin\"}"
+          }
+        },
+        {
+          "address": "vault_policy.app_policy",
+          "mode": "managed",
+          "type": "vault_policy",
+          "name": "app_policy",
+          "provider_name": "registry.terraform.io/hashicorp/vault",
+          "values": {
+            "name": "app-policy",
+            "policy": "path \"secret/data/database\" {\n  capabilities = [\"read\"]\n}\n"
+          }
+        },
+        {
+          "address": "consul_service.web",
+          "mode": "managed",
+          "type": "consul_service",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/consul",
+          "values": {
+            "name": "web-service",
+            "node": "web-node-1",
+            "port": 8080,
+            "tags": ["web", "frontend", "production"],
+            "address": "10.1.2.3"
+          }
+        },
+        {
+          "address": "consul_key_prefix.app_config",
+          "mode": "managed",
+          "type": "consul_key_prefix",
+          "name": "app_config",
+          "provider_name": "registry.terraform.io/hashicorp/consul",
+          "values": {
+            "path_prefix": "app/config/",
+            "subkeys": {
+              "db_host": "db.internal.example.com",
+              "cache_ttl": "300",
+              "debug_mode": "false"
+            }
+          }
+        },
+        {
+          "address": "pagerduty_service.production",
+          "mode": "managed",
+          "type": "pagerduty_service",
+          "name": "production",
+          "provider_name": "registry.terraform.io/pagerduty/pagerduty",
+          "values": {
+            "name": "Production Infrastructure",
+            "description": "Critical production services monitoring",
+            "auto_resolve_timeout": 14400,
+            "acknowledgement_timeout": 600,
+            "escalation_policy": "P1234567",
+            "alert_creation": "create_alerts_and_incidents"
+          }
+        },
+        {
+          "address": "pagerduty_escalation_policy.ops_team",
+          "mode": "managed",
+          "type": "pagerduty_escalation_policy",
+          "name": "ops_team",
+          "provider_name": "registry.terraform.io/pagerduty/pagerduty",
+          "values": {
+            "name": "Ops Team Escalation",
+            "num_loops": 2,
+            "teams": ["T0123456"],
+            "description": "Escalation policy for operations team"
+          }
+        },
+        {
+          "address": "grafana_dashboard.application_metrics",
+          "mode": "managed",
+          "type": "grafana_dashboard",
+          "name": "application_metrics",
+          "provider_name": "registry.terraform.io/grafana/grafana",
+          "values": {
+            "folder": "Production",
+            "config_json": "{\"title\":\"Application Metrics\",\"uid\":\"app-metrics\"}",
+            "overwrite": true
+          }
+        },
+        {
+          "address": "grafana_data_source.prometheus",
+          "mode": "managed",
+          "type": "grafana_data_source",
+          "name": "prometheus",
+          "provider_name": "registry.terraform.io/grafana/grafana",
+          "values": {
+            "type": "prometheus",
+            "name": "Prometheus",
+            "url": "http://prometheus.internal:9090",
+            "is_default": true,
+            "basic_auth_enabled": false
+          }
+        },
+        {
+          "address": "mongodbatlas_cluster.main",
+          "mode": "managed",
+          "type": "mongodbatlas_cluster",
+          "name": "main",
+          "provider_name": "registry.terraform.io/mongodb/mongodbatlas",
+          "values": {
+            "project_id": "5d0884f7cf09a29120e173cf",
+            "name": "production-cluster",
+            "cluster_type": "REPLICASET",
+            "provider_name": "AWS",
+            "provider_region_name": "US_EAST_1",
+            "provider_instance_size_name": "M10",
+            "mongo_db_major_version": "6.0",
+            "backup_enabled": true,
+            "auto_scaling_disk_gb_enabled": true
+          }
+        },
+        {
+          "address": "mongodbatlas_database_user.app_user",
+          "mode": "managed",
+          "type": "mongodbatlas_database_user",
+          "name": "app_user",
+          "provider_name": "registry.terraform.io/mongodb/mongodbatlas",
+          "values": {
+            "project_id": "5d0884f7cf09a29120e173cf",
+            "username": "app-service",
+            "password": "secure-password-here",
+            "auth_database_name": "admin",
+            "roles": [
+              {
+                "role_name": "readWrite",
+                "database_name": "production"
+              }
+            ]
+          }
+        },
+        {
+          "address": "snowflake_database.analytics",
+          "mode": "managed",
+          "type": "snowflake_database",
+          "name": "analytics",
+          "provider_name": "registry.terraform.io/snowflake-labs/snowflake",
+          "values": {
+            "name": "ANALYTICS_DB",
+            "comment": "Analytics database for production data",
+            "data_retention_time_in_days": 7
+          }
+        },
+        {
+          "address": "snowflake_warehouse.compute",
+          "mode": "managed",
+          "type": "snowflake_warehouse",
+          "name": "compute",
+          "provider_name": "registry.terraform.io/snowflake-labs/snowflake",
+          "values": {
+            "name": "COMPUTE_WH",
+            "warehouse_size": "LARGE",
+            "auto_suspend": 300,
+            "auto_resume": true,
+            "comment": "Main compute warehouse"
+          }
+        },
+        {
+          "address": "auth0_client.web_app",
+          "mode": "managed",
+          "type": "auth0_client",
+          "name": "web_app",
+          "provider_name": "registry.terraform.io/auth0/auth0",
+          "values": {
+            "name": "Production Web Application",
+            "description": "Main production web application",
+            "app_type": "regular_web",
+            "callbacks": ["https://app.example.com/callback"],
+            "allowed_logout_urls": ["https://app.example.com/logout"],
+            "web_origins": ["https://app.example.com"],
+            "grant_types": ["authorization_code", "refresh_token"],
+            "jwt_configuration": {
+              "alg": "RS256",
+              "lifetime_in_seconds": 3600
+            }
+          }
+        },
+        {
+          "address": "auth0_role.admin",
+          "mode": "managed",
+          "type": "auth0_role",
+          "name": "admin",
+          "provider_name": "registry.terraform.io/auth0/auth0",
+          "values": {
+            "name": "Administrator",
+            "description": "Full system administrator role"
+          }
+        },
+        {
+          "address": "newrelic_alert_policy.high_response_time",
+          "mode": "managed",
+          "type": "newrelic_alert_policy",
+          "name": "high_response_time",
+          "provider_name": "registry.terraform.io/newrelic/newrelic",
+          "values": {
+            "name": "High Response Time Policy",
+            "incident_preference": "PER_CONDITION",
+            "account_id": "1234567"
+          }
+        },
+        {
+          "address": "newrelic_nrql_alert_condition.response_time",
+          "mode": "managed",
+          "type": "newrelic_nrql_alert_condition",
+          "name": "response_time",
+          "provider_name": "registry.terraform.io/newrelic/newrelic",
+          "values": {
+            "policy_id": "12345",
+            "name": "API Response Time Alert",
+            "type": "static",
+            "enabled": true,
+            "violation_time_limit_seconds": 3600,
+            "nrql": {
+              "query": "SELECT average(duration) FROM Transaction WHERE appName = 'Production API'"
+            },
+            "critical": {
+              "operator": "above",
+              "threshold": 2,
+              "threshold_duration": 300,
+              "threshold_occurrences": "all"
+            }
+          }
+        },
+        {
+          "address": "github_repository.infrastructure",
+          "mode": "managed",
+          "type": "github_repository",
+          "name": "infrastructure",
+          "provider_name": "registry.terraform.io/integrations/github",
+          "values": {
+            "name": "infrastructure-code",
+            "description": "Infrastructure as Code repository",
+            "visibility": "private",
+            "has_issues": true,
+            "has_wiki": true,
+            "auto_init": true,
+            "vulnerability_alerts": true,
+            "topics": ["terraform", "infrastructure", "devops"]
+          }
+        },
+        {
+          "address": "github_branch_protection.main",
+          "mode": "managed",
+          "type": "github_branch_protection",
+          "name": "main",
+          "provider_name": "registry.terraform.io/integrations/github",
+          "values": {
+            "repository_id": "infrastructure-code",
+            "pattern": "main",
+            "enforce_admins": true,
+            "require_signed_commits": true,
+            "required_pull_request_reviews": {
+              "required_approving_review_count": 2,
+              "dismiss_stale_reviews": true,
+              "require_code_owner_reviews": true
+            }
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "datadog_monitor.cpu_monitor",
+      "mode": "managed",
+      "type": "datadog_monitor",
+      "name": "cpu_monitor",
+      "provider_name": "registry.terraform.io/datadog/datadog",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "High CPU Usage Alert",
+          "type": "metric alert",
+          "query": "avg(last_5m):avg:system.cpu.user{*} by {host} > 90",
+          "message": "CPU usage is above 90% on {{host.name}}",
+          "tags": ["team:devops", "env:production"],
+          "notify_no_data": true,
+          "no_data_timeframe": 20,
+          "renotify_interval": 60,
+          "escalation_message": "CPU usage is still high!",
+          "priority": 1
+        }
+      }
+    },
+    {
+      "address": "datadog_dashboard.main",
+      "mode": "managed",
+      "type": "datadog_dashboard",
+      "name": "main",
+      "provider_name": "registry.terraform.io/datadog/datadog",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "title": "Production Infrastructure Dashboard",
+          "description": "Main monitoring dashboard for production",
+          "layout_type": "ordered",
+          "is_read_only": false,
+          "notify_list": ["admin@example.com"],
+          "tags": ["terraform", "production"]
+        }
+      }
+    },
+    {
+      "address": "vault_mount.kvv2",
+      "mode": "managed",
+      "type": "vault_mount",
+      "name": "kvv2",
+      "provider_name": "registry.terraform.io/hashicorp/vault",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "path": "secret",
+          "type": "kv-v2",
+          "description": "KV Version 2 secret engine mount",
+          "default_lease_ttl_seconds": 3600,
+          "max_lease_ttl_seconds": 86400
+        }
+      }
+    },
+    {
+      "address": "vault_generic_secret.db_password",
+      "mode": "managed",
+      "type": "vault_generic_secret",
+      "name": "db_password",
+      "provider_name": "registry.terraform.io/hashicorp/vault",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "path": "secret/data/database",
+          "data_json": "{\"password\":\"super-secret-password\",\"username\":\"admin\"}"
+        }
+      }
+    },
+    {
+      "address": "vault_policy.app_policy",
+      "mode": "managed",
+      "type": "vault_policy",
+      "name": "app_policy",
+      "provider_name": "registry.terraform.io/hashicorp/vault",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "app-policy",
+          "policy": "path \"secret/data/database\" {\n  capabilities = [\"read\"]\n}\n"
+        }
+      }
+    },
+    {
+      "address": "consul_service.web",
+      "mode": "managed",
+      "type": "consul_service",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/consul",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "web-service",
+          "node": "web-node-1",
+          "port": 8080,
+          "tags": ["web", "frontend", "production"],
+          "address": "10.1.2.3"
+        }
+      }
+    },
+    {
+      "address": "consul_key_prefix.app_config",
+      "mode": "managed",
+      "type": "consul_key_prefix",
+      "name": "app_config",
+      "provider_name": "registry.terraform.io/hashicorp/consul",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "path_prefix": "app/config/",
+          "subkeys": {
+            "db_host": "db.internal.example.com",
+            "cache_ttl": "300",
+            "debug_mode": "false"
+          }
+        }
+      }
+    },
+    {
+      "address": "pagerduty_service.production",
+      "mode": "managed",
+      "type": "pagerduty_service",
+      "name": "production",
+      "provider_name": "registry.terraform.io/pagerduty/pagerduty",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "Production Infrastructure",
+          "description": "Critical production services monitoring",
+          "auto_resolve_timeout": 14400,
+          "acknowledgement_timeout": 600,
+          "escalation_policy": "P1234567",
+          "alert_creation": "create_alerts_and_incidents"
+        }
+      }
+    },
+    {
+      "address": "pagerduty_escalation_policy.ops_team",
+      "mode": "managed",
+      "type": "pagerduty_escalation_policy",
+      "name": "ops_team",
+      "provider_name": "registry.terraform.io/pagerduty/pagerduty",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "Ops Team Escalation",
+          "num_loops": 2,
+          "teams": ["T0123456"],
+          "description": "Escalation policy for operations team"
+        }
+      }
+    },
+    {
+      "address": "grafana_dashboard.application_metrics",
+      "mode": "managed",
+      "type": "grafana_dashboard",
+      "name": "application_metrics",
+      "provider_name": "registry.terraform.io/grafana/grafana",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "folder": "Production",
+          "config_json": "{\"title\":\"Application Metrics\",\"uid\":\"app-metrics\"}",
+          "overwrite": true
+        }
+      }
+    },
+    {
+      "address": "grafana_data_source.prometheus",
+      "mode": "managed",
+      "type": "grafana_data_source",
+      "name": "prometheus",
+      "provider_name": "registry.terraform.io/grafana/grafana",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "type": "prometheus",
+          "name": "Prometheus",
+          "url": "http://prometheus.internal:9090",
+          "is_default": true,
+          "basic_auth_enabled": false
+        }
+      }
+    },
+    {
+      "address": "mongodbatlas_cluster.main",
+      "mode": "managed",
+      "type": "mongodbatlas_cluster",
+      "name": "main",
+      "provider_name": "registry.terraform.io/mongodb/mongodbatlas",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "project_id": "5d0884f7cf09a29120e173cf",
+          "name": "production-cluster",
+          "cluster_type": "REPLICASET",
+          "provider_name": "AWS",
+          "provider_region_name": "US_EAST_1",
+          "provider_instance_size_name": "M10",
+          "mongo_db_major_version": "6.0",
+          "backup_enabled": true,
+          "auto_scaling_disk_gb_enabled": true
+        }
+      }
+    },
+    {
+      "address": "mongodbatlas_database_user.app_user",
+      "mode": "managed",
+      "type": "mongodbatlas_database_user",
+      "name": "app_user",
+      "provider_name": "registry.terraform.io/mongodb/mongodbatlas",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "project_id": "5d0884f7cf09a29120e173cf",
+          "username": "app-service",
+          "password": "secure-password-here",
+          "auth_database_name": "admin",
+          "roles": [
+            {
+              "role_name": "readWrite",
+              "database_name": "production"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "address": "snowflake_database.analytics",
+      "mode": "managed",
+      "type": "snowflake_database",
+      "name": "analytics",
+      "provider_name": "registry.terraform.io/snowflake-labs/snowflake",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "ANALYTICS_DB",
+          "comment": "Analytics database for production data",
+          "data_retention_time_in_days": 7
+        }
+      }
+    },
+    {
+      "address": "snowflake_warehouse.compute",
+      "mode": "managed",
+      "type": "snowflake_warehouse",
+      "name": "compute",
+      "provider_name": "registry.terraform.io/snowflake-labs/snowflake",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "COMPUTE_WH",
+          "warehouse_size": "LARGE",
+          "auto_suspend": 300,
+          "auto_resume": true,
+          "comment": "Main compute warehouse"
+        }
+      }
+    },
+    {
+      "address": "auth0_client.web_app",
+      "mode": "managed",
+      "type": "auth0_client",
+      "name": "web_app",
+      "provider_name": "registry.terraform.io/auth0/auth0",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "Production Web Application",
+          "description": "Main production web application",
+          "app_type": "regular_web",
+          "callbacks": ["https://app.example.com/callback"],
+          "allowed_logout_urls": ["https://app.example.com/logout"],
+          "web_origins": ["https://app.example.com"],
+          "grant_types": ["authorization_code", "refresh_token"],
+          "jwt_configuration": {
+            "alg": "RS256",
+            "lifetime_in_seconds": 3600
+          }
+        }
+      }
+    },
+    {
+      "address": "auth0_role.admin",
+      "mode": "managed",
+      "type": "auth0_role",
+      "name": "admin",
+      "provider_name": "registry.terraform.io/auth0/auth0",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "Administrator",
+          "description": "Full system administrator role"
+        }
+      }
+    },
+    {
+      "address": "newrelic_alert_policy.high_response_time",
+      "mode": "managed",
+      "type": "newrelic_alert_policy",
+      "name": "high_response_time",
+      "provider_name": "registry.terraform.io/newrelic/newrelic",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "High Response Time Policy",
+          "incident_preference": "PER_CONDITION",
+          "account_id": "1234567"
+        }
+      }
+    },
+    {
+      "address": "newrelic_nrql_alert_condition.response_time",
+      "mode": "managed",
+      "type": "newrelic_nrql_alert_condition",
+      "name": "response_time",
+      "provider_name": "registry.terraform.io/newrelic/newrelic",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "policy_id": "12345",
+          "name": "API Response Time Alert",
+          "type": "static",
+          "enabled": true,
+          "violation_time_limit_seconds": 3600,
+          "nrql": {
+            "query": "SELECT average(duration) FROM Transaction WHERE appName = 'Production API'"
+          },
+          "critical": {
+            "operator": "above",
+            "threshold": 2,
+            "threshold_duration": 300,
+            "threshold_occurrences": "all"
+          }
+        }
+      }
+    },
+    {
+      "address": "github_repository.infrastructure",
+      "mode": "managed",
+      "type": "github_repository",
+      "name": "infrastructure",
+      "provider_name": "registry.terraform.io/integrations/github",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "infrastructure-code",
+          "description": "Infrastructure as Code repository",
+          "visibility": "private",
+          "has_issues": true,
+          "has_wiki": true,
+          "auto_init": true,
+          "vulnerability_alerts": true,
+          "topics": ["terraform", "infrastructure", "devops"]
+        }
+      }
+    },
+    {
+      "address": "github_branch_protection.main",
+      "mode": "managed",
+      "type": "github_branch_protection",
+      "name": "main",
+      "provider_name": "registry.terraform.io/integrations/github",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "repository_id": "infrastructure-code",
+          "pattern": "main",
+          "enforce_admins": true,
+          "require_signed_commits": true,
+          "required_pull_request_reviews": {
+            "required_approving_review_count": 2,
+            "dismiss_stale_reviews": true,
+            "require_code_owner_reviews": true
+          }
+        }
+      }
+    }
+  ],
+  "configuration": {
+    "provider_config": {
+      "datadog": {
+        "name": "datadog",
+        "version_constraint": "~> 3.0"
+      },
+      "vault": {
+        "name": "vault",
+        "version_constraint": "~> 3.0"
+      },
+      "consul": {
+        "name": "consul",
+        "version_constraint": "~> 2.0"
+      },
+      "pagerduty": {
+        "name": "pagerduty",
+        "version_constraint": "~> 2.0"
+      },
+      "grafana": {
+        "name": "grafana",
+        "version_constraint": "~> 2.0"
+      },
+      "mongodbatlas": {
+        "name": "mongodbatlas",
+        "version_constraint": "~> 1.0"
+      },
+      "snowflake": {
+        "name": "snowflake",
+        "version_constraint": "~> 0.80"
+      },
+      "auth0": {
+        "name": "auth0",
+        "version_constraint": "~> 1.0"
+      },
+      "newrelic": {
+        "name": "newrelic",
+        "version_constraint": "~> 3.0"
+      },
+      "github": {
+        "name": "github",
+        "version_constraint": "~> 5.0"
+      }
+    }
+  }
+}

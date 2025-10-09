@@ -1,0 +1,77 @@
+name: Security-Focused Review
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+  schedule:
+    # Run weekly security audit
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  models: read  # Required for GitHub Models
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v3
+      
+      - name: Terraform Init & Plan
+        run: |
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+      
+      - name: Security Audit
+        uses: thomast1906/terraform-review-ai-action@v1
+        with:
+          ai-provider: 'azure'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          analysis-preset: 'security-audit'
+          analysis-depth: 'detailed'
+          analysis-style: 'severity'
+      
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: ai_analysis.md
+          retention-days: 90
+      
+      - name: Create Issue if Critical Findings
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            if (!fs.existsSync('analysis_summary.json')) {
+              console.log('No analysis summary found');
+              return;
+            }
+            
+            const summary = JSON.parse(fs.readFileSync('analysis_summary.json', 'utf8'));
+            
+            if (summary.has_critical_issues) {
+              const analysis = fs.readFileSync('ai_analysis.md', 'utf8');
+              
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🔴 Critical Security Issues Found - ${new Date().toISOString().split('T')[0]}`,
+                body: `## Security Audit Results\n\n${analysis}\n\n---\n*Automated security audit*`,
+                labels: ['security', 'critical']
+              });
+            }
