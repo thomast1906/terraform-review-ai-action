@@ -1,0 +1,773 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "azurerm_resource_group.main",
+          "mode": "managed",
+          "type": "azurerm_resource_group",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "rg-azure-test-prod",
+            "location": "East US",
+            "tags": {
+              "Environment": "Production",
+              "Project": "Azure-Test",
+              "Owner": "DevOps-Team"
+            }
+          }
+        },
+        {
+          "address": "azurerm_virtual_network.main",
+          "mode": "managed",
+          "type": "azurerm_virtual_network",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "vnet-azure-test",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "address_space": ["10.0.0.0/16"],
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_subnet.web",
+          "mode": "managed",
+          "type": "azurerm_subnet",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "subnet-web",
+            "resource_group_name": "rg-azure-test-prod",
+            "virtual_network_name": "vnet-azure-test",
+            "address_prefixes": ["10.0.1.0/24"]
+          }
+        },
+        {
+          "address": "azurerm_subnet.database",
+          "mode": "managed",
+          "type": "azurerm_subnet",
+          "name": "database",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "subnet-database",
+            "resource_group_name": "rg-azure-test-prod",
+            "virtual_network_name": "vnet-azure-test",
+            "address_prefixes": ["10.0.2.0/24"]
+          }
+        },
+        {
+          "address": "azurerm_network_security_group.web",
+          "mode": "managed",
+          "type": "azurerm_network_security_group",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "nsg-web",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "security_rule": [
+              {
+                "name": "HTTP",
+                "priority": 1001,
+                "direction": "Inbound",
+                "access": "Allow",
+                "protocol": "Tcp",
+                "source_port_range": "*",
+                "destination_port_range": "80",
+                "source_address_prefix": "*",
+                "destination_address_prefix": "*"
+              },
+              {
+                "name": "HTTPS",
+                "priority": 1002,
+                "direction": "Inbound",
+                "access": "Allow",
+                "protocol": "Tcp",
+                "source_port_range": "*",
+                "destination_port_range": "443",
+                "source_address_prefix": "*",
+                "destination_address_prefix": "*"
+              }
+            ]
+          }
+        },
+        {
+          "address": "azurerm_storage_account.main",
+          "mode": "managed",
+          "type": "azurerm_storage_account",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "stazuretestprod001",
+            "resource_group_name": "rg-azure-test-prod",
+            "location": "East US",
+            "account_tier": "Standard",
+            "account_replication_type": "LRS",
+            "account_kind": "StorageV2",
+            "enable_https_traffic_only": true,
+            "min_tls_version": "TLS1_2",
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_storage_container.uploads",
+          "mode": "managed",
+          "type": "azurerm_storage_container",
+          "name": "uploads",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "uploads",
+            "storage_account_name": "stazuretestprod001",
+            "container_access_type": "private"
+          }
+        },
+        {
+          "address": "azurerm_key_vault.main",
+          "mode": "managed",
+          "type": "azurerm_key_vault",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "kv-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "tenant_id": "12345678-1234-1234-1234-123456789012",
+            "sku_name": "standard",
+            "enabled_for_disk_encryption": true,
+            "soft_delete_retention_days": 7,
+            "purge_protection_enabled": false,
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_postgresql_server.main",
+          "mode": "managed",
+          "type": "azurerm_postgresql_server",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "psql-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "administrator_login": "psqladmin",
+            "administrator_login_password": "H@Sh1CoR3!",
+            "sku_name": "GP_Gen5_2",
+            "version": "11",
+            "storage_mb": 5120,
+            "backup_retention_days": 7,
+            "geo_redundant_backup_enabled": false,
+            "auto_grow_enabled": true,
+            "ssl_enforcement_enabled": true,
+            "ssl_minimal_tls_version_enforced": "TLS1_2",
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_postgresql_database.main",
+          "mode": "managed",
+          "type": "azurerm_postgresql_database",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "maindb",
+            "resource_group_name": "rg-azure-test-prod",
+            "server_name": "psql-azure-test-prod",
+            "charset": "UTF8",
+            "collation": "English_United States.1252"
+          }
+        },
+        {
+          "address": "azurerm_app_service_plan.main",
+          "mode": "managed",
+          "type": "azurerm_app_service_plan",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "asp-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "kind": "Linux",
+            "reserved": true,
+            "sku": {
+              "tier": "Standard",
+              "size": "S1"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_app_service.main",
+          "mode": "managed",
+          "type": "azurerm_app_service",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "app-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "app_service_plan_id": "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/rg-azure-test-prod/providers/Microsoft.Web/serverfarms/asp-azure-test-prod",
+            "https_only": true,
+            "site_config": {
+              "linux_fx_version": "NODE|14-lts",
+              "always_on": true,
+              "ftps_state": "Disabled"
+            },
+            "app_settings": {
+              "WEBSITE_NODE_DEFAULT_VERSION": "14.17.0"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_application_insights.main",
+          "mode": "managed",
+          "type": "azurerm_application_insights",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "appi-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "application_type": "web",
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_log_analytics_workspace.main",
+          "mode": "managed",
+          "type": "azurerm_log_analytics_workspace",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "law-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "sku": "PerGB2018",
+            "retention_in_days": 30,
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_container_registry.main",
+          "mode": "managed",
+          "type": "azurerm_container_registry",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "acrazuretestprod",
+            "resource_group_name": "rg-azure-test-prod",
+            "location": "East US",
+            "sku": "Standard",
+            "admin_enabled": false,
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_kubernetes_cluster.main",
+          "mode": "managed",
+          "type": "azurerm_kubernetes_cluster",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "aks-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "dns_prefix": "aksazuretest",
+            "kubernetes_version": "1.25.6",
+            "default_node_pool": {
+              "name": "default",
+              "node_count": 2,
+              "vm_size": "Standard_D2_v2",
+              "vnet_subnet_id": "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/rg-azure-test-prod/providers/Microsoft.Network/virtualNetworks/vnet-azure-test/subnets/subnet-web"
+            },
+            "identity": {
+              "type": "SystemAssigned"
+            },
+            "network_profile": {
+              "network_plugin": "azure",
+              "service_cidr": "10.1.0.0/16",
+              "dns_service_ip": "10.1.0.10"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_public_ip.lb",
+          "mode": "managed",
+          "type": "azurerm_public_ip",
+          "name": "lb",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "pip-lb-azure-test",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "allocation_method": "Static",
+            "sku": "Standard",
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_lb.main",
+          "mode": "managed",
+          "type": "azurerm_lb",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "lb-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "sku": "Standard",
+            "frontend_ip_configuration": {
+              "name": "PublicIPAddress",
+              "public_ip_address_id": "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/rg-azure-test-prod/providers/Microsoft.Network/publicIPAddresses/pip-lb-azure-test"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_redis_cache.main",
+          "mode": "managed",
+          "type": "azurerm_redis_cache",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "redis-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "capacity": 1,
+            "family": "C",
+            "sku_name": "Standard",
+            "enable_non_ssl_port": false,
+            "minimum_tls_version": "1.2",
+            "redis_configuration": {
+              "maxmemory_reserved": 10,
+              "maxmemory_delta": 10,
+              "maxmemory_policy": "allkeys-lru"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_monitor_action_group.main",
+          "mode": "managed",
+          "type": "azurerm_monitor_action_group",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "ag-azure-test-prod",
+            "resource_group_name": "rg-azure-test-prod",
+            "short_name": "aztest",
+            "email_receiver": {
+              "name": "devops-team",
+              "email_address": "devops@company.com"
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        },
+        {
+          "address": "azurerm_cosmosdb_account.main",
+          "mode": "managed",
+          "type": "azurerm_cosmosdb_account",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "cosmos-azure-test-prod",
+            "location": "East US",
+            "resource_group_name": "rg-azure-test-prod",
+            "offer_type": "Standard",
+            "kind": "GlobalDocumentDB",
+            "consistency_policy": {
+              "consistency_level": "Session"
+            },
+            "geo_location": {
+              "location": "East US",
+              "failover_priority": 0
+            },
+            "tags": {
+              "Environment": "Production"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "azurerm_resource_group.main",
+      "mode": "managed",
+      "type": "azurerm_resource_group",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "rg-azure-test-prod",
+          "location": "East US",
+          "tags": {
+            "Environment": "Production",
+            "Project": "Azure-Test",
+            "Owner": "DevOps-Team"
+          }
+        }
+      }
+    },
+    {
+      "address": "azurerm_virtual_network.main",
+      "mode": "managed",
+      "type": "azurerm_virtual_network",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "vnet-azure-test",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod",
+          "address_space": ["10.0.0.0/16"]
+        }
+      }
+    },
+    {
+      "address": "azurerm_subnet.web",
+      "mode": "managed",
+      "type": "azurerm_subnet",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "subnet-web",
+          "resource_group_name": "rg-azure-test-prod",
+          "virtual_network_name": "vnet-azure-test",
+          "address_prefixes": ["10.0.1.0/24"]
+        }
+      }
+    },
+    {
+      "address": "azurerm_subnet.database",
+      "mode": "managed",
+      "type": "azurerm_subnet",
+      "name": "database",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "subnet-database",
+          "resource_group_name": "rg-azure-test-prod",
+          "virtual_network_name": "vnet-azure-test",
+          "address_prefixes": ["10.0.2.0/24"]
+        }
+      }
+    },
+    {
+      "address": "azurerm_network_security_group.web",
+      "mode": "managed",
+      "type": "azurerm_network_security_group",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "nsg-web",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_storage_account.main",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "stazuretestprod001",
+          "resource_group_name": "rg-azure-test-prod",
+          "location": "East US",
+          "account_tier": "Standard",
+          "account_replication_type": "LRS"
+        }
+      }
+    },
+    {
+      "address": "azurerm_storage_container.uploads",
+      "mode": "managed",
+      "type": "azurerm_storage_container",
+      "name": "uploads",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "uploads",
+          "storage_account_name": "stazuretestprod001",
+          "container_access_type": "private"
+        }
+      }
+    },
+    {
+      "address": "azurerm_key_vault.main",
+      "mode": "managed",
+      "type": "azurerm_key_vault",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "kv-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_postgresql_server.main",
+      "mode": "managed",
+      "type": "azurerm_postgresql_server",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "psql-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_postgresql_database.main",
+      "mode": "managed",
+      "type": "azurerm_postgresql_database",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "maindb",
+          "resource_group_name": "rg-azure-test-prod",
+          "server_name": "psql-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_app_service_plan.main",
+      "mode": "managed",
+      "type": "azurerm_app_service_plan",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "asp-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_app_service.main",
+      "mode": "managed",
+      "type": "azurerm_app_service",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "app-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_application_insights.main",
+      "mode": "managed",
+      "type": "azurerm_application_insights",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "appi-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_log_analytics_workspace.main",
+      "mode": "managed",
+      "type": "azurerm_log_analytics_workspace",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "law-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_container_registry.main",
+      "mode": "managed",
+      "type": "azurerm_container_registry",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "acrazuretestprod",
+          "resource_group_name": "rg-azure-test-prod",
+          "location": "East US"
+        }
+      }
+    },
+    {
+      "address": "azurerm_kubernetes_cluster.main",
+      "mode": "managed",
+      "type": "azurerm_kubernetes_cluster",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "aks-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_public_ip.lb",
+      "mode": "managed",
+      "type": "azurerm_public_ip",
+      "name": "lb",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "pip-lb-azure-test",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_lb.main",
+      "mode": "managed",
+      "type": "azurerm_lb",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "lb-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_redis_cache.main",
+      "mode": "managed",
+      "type": "azurerm_redis_cache",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "redis-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_monitor_action_group.main",
+      "mode": "managed",
+      "type": "azurerm_monitor_action_group",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "ag-azure-test-prod",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    },
+    {
+      "address": "azurerm_cosmosdb_account.main",
+      "mode": "managed",
+      "type": "azurerm_cosmosdb_account",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "cosmos-azure-test-prod",
+          "location": "East US",
+          "resource_group_name": "rg-azure-test-prod"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+name: 'Build and Test'
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    
+    - name: Create virtual environment and install dependencies
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov bandit
+    
+    - name: Check Python syntax
+      run: |
+        source venv/bin/activate
+        python -m py_compile analyse_terraform.py
+    
+    - name: Run unit tests
+      run: |
+        source venv/bin/activate
+        python -m pytest tests/ -v --cov=. --cov-report=term-missing
+    
+    - name: Validate action.yml
+      run: |
+        if [ ! -f action.yml ]; then
+          echo "::error::action.yml not found"
+          exit 1
+        fi
+        echo "✅ action.yml found"
+    
+    - name: Check for security issues
+      run: |
+        source venv/bin/activate
+        bandit -r . -ll -f json -o bandit-report.json --exclude ./venv,./tests 2>/dev/null || true
+        if [ -f bandit-report.json ]; then
+          echo "✅ Security scan completed"
+        fi

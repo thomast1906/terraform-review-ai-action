@@ -1,0 +1,33 @@
+name: 'Test Terraform AI Review Action'
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - '**.hcl'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  terraform-ai-review:
+    runs-on: ubuntu-latest
+    name: AI Review Terraform Changes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Run Terraform AI Review
+        uses: ./
+        with:
+          ai-provider: 'azure'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+          terraform-directory: 'examples'
+          github-token: ${{ secrets.GITHUB_TOKEN }}

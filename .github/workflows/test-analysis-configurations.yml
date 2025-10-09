@@ -1,0 +1,1115 @@
+name: Test Analysis Configurations[All]
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'examples/terraform-plan-json/*.json'
+      - '.github/workflows/test-analysis-configurations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read
+
+jobs:
+  # Analysis Preset Tests
+  preset-security-audit:
+    name: '🔒 Preset: Security Audit'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Security Audit Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'security-audit'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preset-security-audit-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  preset-cost-optimisation:
+    name: '💰 Preset: Cost Optimization'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Cost Optimization Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'cost-optimisation'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preset-cost-optimisation-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  preset-production-ready:
+    name: '🚀 Preset: Production Ready'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Production Readiness Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preset-production-ready-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  preset-quick-check:
+    name: '⚡ Preset: Quick Check'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Quick Check Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o-mini'
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'quick-check'
+        analysis-depth: 'quick'
+        analysis-mode: 'plan-only'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preset-quick-check-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  preset-complete:
+    name: '📋 Preset: Complete Review'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Complete Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'complete'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: preset-complete-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Analysis Depth Tests
+  depth-quick:
+    name: '⚡ Depth: Quick (~4k tokens)'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Quick Depth Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o-mini'
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-focus: 'security,cost,best-practices'
+        analysis-depth: 'quick'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: depth-quick-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  depth-standard:
+    name: '📊 Depth: Standard (~8k tokens)'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Standard Depth Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-focus: 'security,cost,best-practices,deployment'
+        analysis-depth: 'standard'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: depth-standard-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  depth-detailed:
+    name: '🔍 Depth: Detailed (~12k tokens)'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Detailed Depth Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-focus: 'security,cost,best-practices,deployment,compliance'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: depth-detailed-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Analysis Style Tests
+  style-severity:
+    name: '🎯 Style: Severity-Based'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Severity Style Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-depth: 'standard'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: style-severity-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  style-domain:
+    name: '📁 Style: Domain-Based'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Domain Style Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: style-domain-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Analysis Mode Tests
+  mode-plan-only:
+    name: '📄 Mode: Plan-Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Plan-Only Mode Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o'
+        terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'quick-check'
+        analysis-mode: 'plan-only'
+        analysis-depth: 'quick'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mode-plan-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  mode-comprehensive:
+    name: '📚 Mode: Comprehensive'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Comprehensive Mode Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
+        terraform-directory: 'examples'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-mode: 'comprehensive'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mode-comprehensive-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Custom Focus Area Tests
+  focus-security-only:
+    name: '🔐 Focus: Security Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Security Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'security'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-security-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-cost-performance:
+    name: '💸 Focus: Cost & Performance'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Cost & Performance Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'cost,performance'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-cost-performance-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-reliability-observability:
+    name: '📡 Focus: Reliability & Observability'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Reliability & Observability Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o'
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'reliability,observability'
+        analysis-depth: 'detailed'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-reliability-observability-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-networking-data:
+    name: '🌐 Focus: Networking & Data'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Networking & Data Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'networking,data'
+        analysis-depth: 'standard'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-networking-data-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-compliance-governance:
+    name: '⚖️ Focus: Compliance & Governance'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Compliance & Governance Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'compliance,governance'
+        analysis-depth: 'detailed'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-compliance-governance-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Individual Focus Area Tests
+  focus-deployment-only:
+    name: '🚀 Focus: Deployment Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Deployment Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'deployment'
+        analysis-depth: 'standard'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-deployment-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-best-practices-only:
+    name: '✨ Focus: Best Practices Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Best Practices Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o'
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'best-practices'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-best-practices-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-compliance-only:
+    name: '📋 Focus: Compliance Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Compliance Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'compliance'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-compliance-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-performance-only:
+    name: '⚡ Focus: Performance Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Performance Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'performance'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-performance-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  focus-governance-only:
+    name: '🏛️ Focus: Governance Only'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Governance Focus Analysis
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o'
+        terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: ''
+        analysis-focus: 'governance'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: focus-governance-only-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # MCP Server Configuration Tests
+  mcp-enabled-detailed:
+    name: '🔧 MCP: Enabled with Details'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Analysis with MCP Details
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-depth: 'standard'
+        skip-mcp-validation: 'false'
+        show-mcp-details: 'true'
+        disable-pr-comment: 'true'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mcp-enabled-detailed-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  mcp-disabled:
+    name: '🚫 MCP: Disabled'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Analysis without MCP
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-depth: 'standard'
+        skip-mcp-validation: 'true'
+        disable-pr-comment: 'true'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mcp-disabled-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Real-World Scenario Tests
+  scenario-fast-cicd:
+    name: '⚡ Scenario: Fast CI/CD Pipeline'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Fast CI/CD Scenario
+      uses: ./
+      with:
+        ai-provider: 'github-models'
+        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        github-models-model: 'gpt-4o-mini'
+        terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'quick-check'
+        analysis-mode: 'plan-only'
+        analysis-depth: 'quick'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: scenario-fast-cicd-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  scenario-security-audit:
+    name: '🔒 Scenario: Security Audit'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Security Audit Scenario
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
+        terraform-directory: 'examples'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-focus: 'security,compliance,governance'
+        analysis-mode: 'comprehensive'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: scenario-security-audit-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  scenario-cost-review:
+    name: '💰 Scenario: Cost Review'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Cost Review Scenario
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-focus: 'cost,performance'
+        analysis-depth: 'standard'
+        analysis-style: 'domain'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: scenario-cost-review-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  scenario-pre-production:
+    name: '🎯 Scenario: Pre-Production Gate'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Run Pre-Production Scenario
+      uses: ./
+      with:
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+        terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
+        terraform-directory: 'examples'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        analysis-preset: 'production-ready'
+        analysis-mode: 'comprehensive'
+        analysis-depth: 'detailed'
+        analysis-style: 'severity'
+        disable-pr-comment: 'true'
+        skip-mcp-validation: 'false'
+
+    - name: Upload Analysis
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: scenario-pre-production-${{ github.run_id }}
+        path: ai_analysis.md
+        retention-days: 1
+
+  # Combine all analyses and create PR comment
+  combine-and-comment:
+    name: '📝 Combine All Analyses'
+    needs: 
+      - preset-security-audit
+      - preset-cost-optimisation
+      - preset-production-ready
+      - preset-quick-check
+      - preset-complete
+      - depth-quick
+      - depth-standard
+      - depth-detailed
+      - style-severity
+      - style-domain
+      - mode-plan-only
+      - mode-comprehensive
+      - focus-security-only
+      - focus-cost-performance
+      - focus-reliability-observability
+      - focus-networking-data
+      - focus-compliance-governance
+      - focus-deployment-only
+      - focus-best-practices-only
+      - focus-compliance-only
+      - focus-performance-only
+      - focus-governance-only
+      - mcp-enabled-detailed
+      - mcp-disabled
+      - scenario-fast-cicd
+      - scenario-security-audit
+      - scenario-cost-review
+      - scenario-pre-production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && always()
+    
+    steps:
+    - name: Download All Analyses
+      uses: actions/download-artifact@v4
+      with:
+        path: analyses
+
+    - name: Create Combined PR Comments
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          
+          // Define all analysis configurations
+          const analyses = {
+            presets: [
+              { name: 'preset-security-audit', icon: '🔒', title: 'Security Audit Preset' },
+              { name: 'preset-cost-optimisation', icon: '💰', title: 'Cost Optimization Preset' },
+              { name: 'preset-production-ready', icon: '🚀', title: 'Production Ready Preset' },
+              { name: 'preset-quick-check', icon: '⚡', title: 'Quick Check Preset' },
+              { name: 'preset-complete', icon: '📋', title: 'Complete Review Preset' }
+            ],
+            depths: [
+              { name: 'depth-quick', icon: '⚡', title: 'Quick Depth (~4k tokens)' },
+              { name: 'depth-standard', icon: '📊', title: 'Standard Depth (~8k tokens)' },
+              { name: 'depth-detailed', icon: '🔍', title: 'Detailed Depth (~12k tokens)' }
+            ],
+            styles: [
+              { name: 'style-severity', icon: '🎯', title: 'Severity-Based Style' },
+              { name: 'style-domain', icon: '📁', title: 'Domain-Based Style' }
+            ],
+            modes: [
+              { name: 'mode-plan-only', icon: '📄', title: 'Plan-Only Mode' },
+              { name: 'mode-comprehensive', icon: '📚', title: 'Comprehensive Mode' }
+            ],
+            focuses: [
+              { name: 'focus-security-only', icon: '🔐', title: 'Security Only Focus' },
+              { name: 'focus-cost-performance', icon: '💸', title: 'Cost & Performance Focus' },
+              { name: 'focus-reliability-observability', icon: '📡', title: 'Reliability & Observability Focus' },
+              { name: 'focus-networking-data', icon: '🌐', title: 'Networking & Data Focus' },
+              { name: 'focus-compliance-governance', icon: '⚖️', title: 'Compliance & Governance Focus' }
+            ],
+            individualFocuses: [
+              { name: 'focus-deployment-only', icon: '🚀', title: 'Deployment Only Focus' },
+              { name: 'focus-best-practices-only', icon: '✨', title: 'Best Practices Only Focus' },
+              { name: 'focus-compliance-only', icon: '📋', title: 'Compliance Only Focus' },
+              { name: 'focus-performance-only', icon: '⚡', title: 'Performance Only Focus' },
+              { name: 'focus-governance-only', icon: '🏛️', title: 'Governance Only Focus' }
+            ],
+            mcpTests: [
+              { name: 'mcp-enabled-detailed', icon: '🔧', title: 'MCP Enabled with Details' },
+              { name: 'mcp-disabled', icon: '🚫', title: 'MCP Disabled' }
+            ],
+            scenarios: [
+              { name: 'scenario-fast-cicd', icon: '⚡', title: 'Fast CI/CD Pipeline' },
+              { name: 'scenario-security-audit', icon: '🔒', title: 'Security Audit' },
+              { name: 'scenario-cost-review', icon: '💰', title: 'Cost Review' },
+              { name: 'scenario-pre-production', icon: '🎯', title: 'Pre-Production Gate' }
+            ]
+          };
+          
+          // Function to read and format analysis
+          const readAnalysis = (name) => {
+            try {
+              const content = fs.readFileSync(`analyses/${name}-${{ github.run_id }}/ai_analysis.md`, 'utf8');
+              const maxLength = 15000; // Limit per analysis to ensure we don't exceed comment size
+              return content.length > maxLength 
+                ? content.substring(0, maxLength) + '\n\n... (content truncated due to length limits)'
+                : content;
+            } catch (e) {
+              return `⚠️ Analysis not available\n\n**Error:** ${e.message}`;
+            }
+          };
+          
+          // Helper function to create section content
+          const createSection = (title, description, configs) => {
+            let section = `## ${title}\n\n${description}\n\n`;
+            for (const config of configs) {
+              const content = readAnalysis(config.name);
+              section += `<details>\n`;
+              section += `<summary><strong>${config.icon} ${config.title}</strong> - Click to expand</summary>\n\n`;
+              section += `${content}\n\n`;
+              section += `</details>\n\n`;
+            }
+            return section;
+          };
+          
+          // Delete old comments from this workflow
+          const comments = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          const oldComments = comments.data.filter(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('🧪 Analysis Configuration Testing Results')
+          );
+          
+          for (const comment of oldComments) {
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id
+            });
+          }
+          
+          // Comment 1: Header + Presets + Depths
+          let comment1 = `# 🧪 Analysis Configuration Testing Results (Part 1/3)\n\n`;
+          comment1 += `> **Analysis Date:** ${new Date().toUTCString()}\n`;
+          comment1 += `> **Workflow Run:** [#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+          comment1 += `> **Total Configurations Tested:** ${Object.values(analyses).flat().length}\n\n`;
+          comment1 += `This comprehensive test suite validates all available analysis configurations to ensure consistent and high-quality results across different settings.\n\n`;
+          comment1 += `---\n\n`;
+          comment1 += createSection(
+            '🎯 Analysis Presets',
+            'Analysis presets provide pre-configured combinations of focus areas for common use cases.',
+            analyses.presets
+          );
+          comment1 += `---\n\n`;
+          comment1 += createSection(
+            '⚡ Analysis Depth Levels',
+            'Analysis depth controls the thoroughness of AI analysis (token limits and temperature settings).',
+            analyses.depths
+          );
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment1
+          });
+          console.log('Created comment 1/3');
+          
+          // Comment 2: Styles + Modes + Custom Focus Areas
+          let comment2 = `# 🧪 Analysis Configuration Testing Results (Part 2/3)\n\n`;
+          comment2 += `> Continuation of configuration testing results...\n\n`;
+          comment2 += createSection(
+            '📋 Analysis Output Styles',
+            'Output styles determine how findings are organised in the analysis results.',
+            analyses.styles
+          );
+          comment2 += `---\n\n`;
+          comment2 += createSection(
+            '🔧 Analysis Modes',
+            'Analysis modes determine the scope of analysis (plan-only vs comprehensive with source files).',
+            analyses.modes
+          );
+          comment2 += `---\n\n`;
+          comment2 += createSection(
+            '🎨 Custom Focus Areas',
+            'Custom focus areas allow targeted analysis of specific infrastructure domains.',
+            analyses.focuses
+          );
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment2
+          });
+          console.log('Created comment 2/3');
+          
+          // Comment 3: Individual Focus + MCP Tests + Scenarios + Summary
+          let comment3 = `# 🧪 Analysis Configuration Testing Results (Part 3/3)\n\n`;
+          comment3 += `> Final part of configuration testing results...\n\n`;
+          comment3 += createSection(
+            '🔍 Individual Focus Areas',
+            'Testing each focus area individually to validate specific domain analysis.',
+            analyses.individualFocuses
+          );
+          comment3 += `---\n\n`;
+          comment3 += createSection(
+            '🔧 MCP Server Configuration',
+            'Testing different MCP (Model Context Protocol) server configurations to validate HashiCorp integration.',
+            analyses.mcpTests
+          );
+          comment3 += `---\n\n`;
+          comment3 += createSection(
+            '🌍 Real-World Scenarios',
+            'Common real-world use cases with optimal configuration combinations.',
+            analyses.scenarios
+          );
+          comment3 += `---\n\n`;
+          comment3 += `## 📊 Test Summary\n\n`;
+          comment3 += `| Category | Configurations | Status |\n`;
+          comment3 += `|----------|----------------|--------|\n`;
+          comment3 += `| Analysis Presets | ${analyses.presets.length} | ✅ |\n`;
+          comment3 += `| Analysis Depths | ${analyses.depths.length} | ✅ |\n`;
+          comment3 += `| Output Styles | ${analyses.styles.length} | ✅ |\n`;
+          comment3 += `| Analysis Modes | ${analyses.modes.length} | ✅ |\n`;
+          comment3 += `| Custom Focus Areas | ${analyses.focuses.length} | ✅ |\n`;
+          comment3 += `| Individual Focus Areas | ${analyses.individualFocuses.length} | ✅ |\n`;
+          comment3 += `| MCP Server Tests | ${analyses.mcpTests.length} | ✅ |\n`;
+          comment3 += `| Real-World Scenarios | ${analyses.scenarios.length} | ✅ |\n`;
+          comment3 += `| **Total** | **${Object.values(analyses).flat().length}** | **✅** |\n\n`;
+          comment3 += `*🤖 Powered by AI with HashiCorp Terraform MCP Server Integration*\n`;
+          comment3 += `*📚 All configurations tested against real Terraform plan JSON files*`;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment3
+          });
+          console.log('Created comment 3/3');

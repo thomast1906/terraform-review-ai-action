@@ -1,0 +1,281 @@
+name: 'Terraform AI Plan Review'
+description: 'AI-powered review of Terraform plans using Azure OpenAI or GitHub Models and HashiCorp Terraform MCP Server'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  # AI Provider Configuration
+  ai-provider:
+    description: 'AI provider: "azure" for Azure OpenAI or "github-models" for GitHub Models'
+    required: false
+    default: 'github-models'
+  
+  # Azure OpenAI Configuration
+  azure-openai-api-key:
+    description: 'Azure OpenAI API key'
+    required: false
+  azure-openai-endpoint:
+    description: 'Azure OpenAI endpoint URL'
+    required: false
+  azure-openai-api-version:
+    description: 'Azure OpenAI API version'
+    required: false
+    default: '2024-02-01'
+  azure-openai-deployment:
+    description: 'Azure OpenAI deployment name'
+    required: false
+    default: 'gpt-4'
+  
+  # GitHub Models Configuration
+  github-models-token:
+    description: 'GitHub token for GitHub Models API (can use GITHUB_TOKEN)'
+    required: false
+  github-models-model:
+    description: 'GitHub Models model name'
+    required: false
+    default: 'gpt-5'
+  
+  # Terraform Configuration
+  terraform-plan-path:
+    description: 'Path to the Terraform plan JSON file'
+    required: false
+    default: 'tfplan.json'
+  terraform-directory:
+    description: 'Directory containing Terraform files'
+    required: false
+    default: '.'
+  
+  # GitHub Configuration
+  github-token:
+    description: 'GitHub token for commenting on PRs'
+    required: true
+  disable-pr-comment:
+    description: 'Disable automatic PR commenting (useful when multiple workflows use the same action)'
+    required: false
+    default: 'false'
+  
+  # Analysis Configuration
+  analysis-preset:
+    description: 'Analysis preset: "security-audit", "cost-optimisation", "production-ready", "quick-check", or "complete". Overrides analysis-focus if set.'
+    required: false
+    default: 'complete'
+  analysis-focus:
+    description: 'Focus areas for analysis (comma-separated): security,cost,best-practices,deployment,compliance,performance,reliability,observability,networking,data,governance'
+    required: false
+    default: 'security,cost,best-practices,deployment'
+  analysis-mode:
+    description: 'Analysis mode: "plan-only" for faster analysis of just the JSON plan, or "comprehensive" for plan + source files'
+    required: false
+    default: 'comprehensive'
+  analysis-depth:
+    description: 'Analysis depth: "quick" for high-level review, "standard" for balanced analysis, or "detailed" for comprehensive examination'
+    required: false
+    default: 'detailed'
+  analysis-style:
+    description: 'Analysis organisation: "severity" for summary with critical/warnings/recommendations, or "domain" for grouping by focus areas'
+    required: false
+    default: 'severity'
+  
+  # MCP Server Configuration
+  skip-mcp-validation:
+    description: 'Skip HashiCorp Terraform MCP server validation'
+    required: false
+    default: 'false'
+  show-mcp-details:
+    description: 'Show detailed MCP server analysis section for troubleshooting'
+    required: false
+    default: 'false'
+  mcp-server-timeout:
+    description: 'Timeout in seconds for MCP server startup'
+    required: false
+    default: '60'
+  
+  # Security & Performance Configuration
+  enable-data-scrubbing:
+    description: 'Enable automatic scrubbing of sensitive data (passwords, API keys, secrets) before sending to AI'
+    required: false
+    default: 'true'
+  max-file-size-mb:
+    description: 'Maximum size per file in MB (prevents processing oversized files)'
+    required: false
+    default: '10'
+  max-total-size-mb:
+    description: 'Maximum total size of all files in MB (prevents excessive API costs and memory usage)'
+    required: false
+    default: '50'
+  max-files:
+    description: 'Maximum number of files to process (prevents resource exhaustion)'
+    required: false
+    default: '100'
+  api-timeout-seconds:
+    description: 'Timeout for AI API calls in seconds (prevents hanging requests)'
+    required: false
+    default: '120'
+  api-max-retries:
+    description: 'Maximum number of API retry attempts with exponential backoff'
+    required: false
+    default: '3'
+
+outputs:
+  analysis-result:
+    description: 'The AI analysis result'
+    value: ${{ steps.analysis.outputs.analysis-result }}
+  has-issues:
+    description: 'Whether critical issues were found'
+    value: ${{ steps.analysis.outputs.has-issues }}
+  recommendations-count:
+    description: 'Number of recommendations provided'
+    value: ${{ steps.analysis.outputs.recommendations-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Create Virtual Environment and Install Dependencies
+      shell: bash
+      run: |
+        python -m venv terraform-ai-venv
+        source terraform-ai-venv/bin/activate
+        python -m pip install --upgrade pip
+        pip install --no-cache-dir -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Start Terraform MCP Server
+      if: inputs.skip-mcp-validation != 'true'
+      shell: bash
+      id: mcp-server
+      run: |
+        echo "Starting HashiCorp Terraform MCP Server..."
+        
+        # Check if Docker is available
+        if ! command -v docker &> /dev/null; then
+          echo "Warning: Docker not available, skipping MCP server startup"
+          echo "mcp_available=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Pull the latest MCP server image
+        echo "Pulling HashiCorp Terraform MCP Server image..."
+        if ! docker pull hashicorp/terraform-mcp-server:latest; then
+          echo "Warning: Failed to pull MCP server image, continuing without MCP validation"
+          echo "mcp_available=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Test JSON-RPC stdio mode
+        echo "Testing MCP server JSON-RPC stdio mode..."
+        if echo '{"jsonrpc": "2.0", "id": "test", "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "1.0.0"}}}' | timeout 15 docker run --rm -i hashicorp/terraform-mcp-server:latest 2>/dev/null | grep -q '"result"'; then
+          echo "MCP server JSON-RPC stdio mode is working"
+          echo "mcp_available=true" >> $GITHUB_OUTPUT
+        else
+          echo "Warning: MCP server stdio mode test failed, continuing without MCP validation"
+          echo "mcp_available=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run AI Analysis
+      id: analysis
+      shell: bash
+      env:
+        AI_PROVIDER: ${{ inputs.ai-provider }}
+        AZURE_OPENAI_API_KEY: ${{ inputs.azure-openai-api-key }}
+        AZURE_OPENAI_ENDPOINT: ${{ inputs.azure-openai-endpoint }}
+        AZURE_OPENAI_API_VERSION: ${{ inputs.azure-openai-api-version }}
+        AZURE_OPENAI_DEPLOYMENT: ${{ inputs.azure-openai-deployment }}
+        GITHUB_MODELS_TOKEN: ${{ inputs.github-models-token }}
+        GITHUB_MODELS_MODEL: ${{ inputs.github-models-model }}
+        TERRAFORM_PLAN_PATH: ${{ inputs.terraform-plan-path }}
+        TERRAFORM_DIRECTORY: ${{ inputs.terraform-directory }}
+        ANALYSIS_PRESET: ${{ inputs.analysis-preset }}
+        ANALYSIS_FOCUS: ${{ inputs.analysis-focus }}
+        ANALYSIS_MODE: ${{ inputs.analysis-mode }}
+        ANALYSIS_STYLE: ${{ inputs.analysis-style }}
+        MCP_AVAILABLE: ${{ steps.mcp-server.outputs.mcp_available || 'false' }}
+        SKIP_MCP: ${{ inputs.skip-mcp-validation }}
+        SHOW_MCP_DETAILS: ${{ inputs.show-mcp-details }}
+        # Security & Performance Configuration
+        SCRUB_SENSITIVE_DATA: ${{ inputs.enable-data-scrubbing }}
+        MAX_FILE_SIZE_MB: ${{ inputs.max-file-size-mb }}
+        MAX_TOTAL_SIZE_MB: ${{ inputs.max-total-size-mb }}
+        MAX_FILES: ${{ inputs.max-files }}
+        API_TIMEOUT_SECONDS: ${{ inputs.api-timeout-seconds }}
+        API_MAX_RETRIES: ${{ inputs.api-max-retries }}
+      run: |
+        # Activate virtual environment
+        source terraform-ai-venv/bin/activate
+        
+        # Run the analysis
+        python "${{ github.action_path }}/analyse_terraform.py"
+        
+        # Set outputs
+        if [ -f "analysis_summary.json" ]; then
+          echo "has-issues=$(jq -r '.has_critical_issues' analysis_summary.json)" >> $GITHUB_OUTPUT
+          echo "recommendations-count=$(jq -r '.recommendations_count' analysis_summary.json)" >> $GITHUB_OUTPUT
+        fi
+        
+        if [ -f "ai_analysis.md" ]; then
+          analysis_json=$(jq -Rs . < ai_analysis.md)
+          echo "analysis-result=$analysis_json" >> $GITHUB_OUTPUT
+        fi
+        
+        # Deactivate virtual environment
+        deactivate
+
+    - name: Comment on PR
+      if: github.event_name == 'pull_request' && inputs.disable-pr-comment != 'true'
+      uses: actions/github-script@v8
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          
+          if (!fs.existsSync('ai_analysis.md')) {
+            console.log('No analysis file found, skipping PR comment');
+            return;
+          }
+          
+          const analysis = fs.readFileSync('ai_analysis.md', 'utf8');
+          
+          // Check if this is an update to existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Terraform AI Plan Analysis')
+          );
+          
+          const commentBody = analysis + '\n\n---\n*Analysis powered by Azure OpenAI/GitHub Models and HashiCorp Terraform MCP Server*\n*Action: [terraform-ai-review](https://github.com/marketplace/actions/terraform-ai-plan-review)*';
+          
+          if (botComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              comment_id: botComment.id,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+            console.log('Updated existing PR comment');
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+            console.log('Created new PR comment');
+          }
+
+    - name: Cleanup
+      if: always()
+      shell: bash
+      run: |
+        # Clean up virtual environment
+        rm -rf terraform-ai-venv || true

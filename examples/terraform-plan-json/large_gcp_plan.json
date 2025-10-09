@@ -1,0 +1,827 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "google_compute_network.main",
+          "mode": "managed",
+          "type": "google_compute_network",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "vpc-gcp-test-prod",
+            "auto_create_subnetworks": false,
+            "routing_mode": "REGIONAL",
+            "description": "VPC for GCP Test Production"
+          }
+        },
+        {
+          "address": "google_compute_subnetwork.web",
+          "mode": "managed",
+          "type": "google_compute_subnetwork",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "subnet-web-gcp-test-prod",
+            "ip_cidr_range": "10.0.1.0/24",
+            "region": "us-central1",
+            "network": "vpc-gcp-test-prod",
+            "private_ip_google_access": true
+          }
+        },
+        {
+          "address": "google_compute_subnetwork.database",
+          "mode": "managed",
+          "type": "google_compute_subnetwork",
+          "name": "database",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "subnet-database-gcp-test-prod",
+            "ip_cidr_range": "10.0.2.0/24",
+            "region": "us-central1",
+            "network": "vpc-gcp-test-prod",
+            "private_ip_google_access": true
+          }
+        },
+        {
+          "address": "google_compute_firewall.web",
+          "mode": "managed",
+          "type": "google_compute_firewall",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "fw-allow-http-https",
+            "network": "vpc-gcp-test-prod",
+            "direction": "INGRESS",
+            "priority": 1000,
+            "source_ranges": ["0.0.0.0/0"],
+            "target_tags": ["web-server"],
+            "allow": [
+              {
+                "protocol": "tcp",
+                "ports": ["80", "443"]
+              }
+            ]
+          }
+        },
+        {
+          "address": "google_storage_bucket.main",
+          "mode": "managed",
+          "type": "google_storage_bucket",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "gcs-gcp-test-prod-uploads-001",
+            "location": "US",
+            "storage_class": "STANDARD",
+            "uniform_bucket_level_access": true,
+            "versioning": {
+              "enabled": true
+            },
+            "labels": {
+              "environment": "production",
+              "project": "gcp-test"
+            }
+          }
+        },
+        {
+          "address": "google_storage_bucket_iam_binding.main",
+          "mode": "managed",
+          "type": "google_storage_bucket_iam_binding",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "bucket": "gcs-gcp-test-prod-uploads-001",
+            "role": "roles/storage.objectViewer",
+            "members": ["serviceAccount:gcp-test-prod@project.iam.gserviceaccount.com"]
+          }
+        },
+        {
+          "address": "google_kms_key_ring.main",
+          "mode": "managed",
+          "type": "google_kms_key_ring",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "keyring-gcp-test-prod",
+            "location": "us-central1"
+          }
+        },
+        {
+          "address": "google_kms_crypto_key.main",
+          "mode": "managed",
+          "type": "google_kms_crypto_key",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "key-gcp-test-prod",
+            "key_ring": "projects/gcp-test-prod/locations/us-central1/keyRings/keyring-gcp-test-prod",
+            "rotation_period": "7776000s",
+            "purpose": "ENCRYPT_DECRYPT",
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_sql_database_instance.main",
+          "mode": "managed",
+          "type": "google_sql_database_instance",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "cloudsql-postgres-gcp-test-prod",
+            "region": "us-central1",
+            "database_version": "POSTGRES_14",
+            "settings": {
+              "tier": "db-custom-2-7680",
+              "disk_size": 100,
+              "disk_type": "PD_SSD",
+              "backup_configuration": {
+                "enabled": true,
+                "start_time": "03:00",
+                "point_in_time_recovery_enabled": true
+              },
+              "ip_configuration": {
+                "ipv4_enabled": false,
+                "private_network": "projects/gcp-test-prod/global/networks/vpc-gcp-test-prod",
+                "require_ssl": true
+              },
+              "database_flags": [
+                {
+                  "name": "max_connections",
+                  "value": "100"
+                }
+              ]
+            },
+            "deletion_protection": true
+          }
+        },
+        {
+          "address": "google_sql_database.main",
+          "mode": "managed",
+          "type": "google_sql_database",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "maindb",
+            "instance": "cloudsql-postgres-gcp-test-prod",
+            "charset": "UTF8",
+            "collation": "en_US.UTF8"
+          }
+        },
+        {
+          "address": "google_sql_user.main",
+          "mode": "managed",
+          "type": "google_sql_user",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "dbadmin",
+            "instance": "cloudsql-postgres-gcp-test-prod",
+            "password": "Ch@ngeMe123!"
+          }
+        },
+        {
+          "address": "google_redis_instance.main",
+          "mode": "managed",
+          "type": "google_redis_instance",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "redis-gcp-test-prod",
+            "tier": "STANDARD_HA",
+            "memory_size_gb": 1,
+            "region": "us-central1",
+            "redis_version": "REDIS_7_0",
+            "display_name": "Redis GCP Test Production",
+            "authorized_network": "vpc-gcp-test-prod",
+            "transit_encryption_mode": "SERVER_AUTHENTICATION",
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_container_cluster.main",
+          "mode": "managed",
+          "type": "google_container_cluster",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "gke-gcp-test-prod",
+            "location": "us-central1",
+            "initial_node_count": 1,
+            "remove_default_node_pool": true,
+            "network": "vpc-gcp-test-prod",
+            "subnetwork": "subnet-web-gcp-test-prod",
+            "ip_allocation_policy": {
+              "cluster_secondary_range_name": "pods",
+              "services_secondary_range_name": "services"
+            },
+            "private_cluster_config": {
+              "enable_private_nodes": true,
+              "enable_private_endpoint": false,
+              "master_ipv4_cidr_block": "172.16.0.0/28"
+            },
+            "master_authorized_networks_config": {
+              "cidr_blocks": [
+                {
+                  "cidr_block": "0.0.0.0/0",
+                  "display_name": "All"
+                }
+              ]
+            },
+            "addons_config": {
+              "http_load_balancing": {
+                "disabled": false
+              },
+              "horizontal_pod_autoscaling": {
+                "disabled": false
+              }
+            },
+            "resource_labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_container_node_pool.main",
+          "mode": "managed",
+          "type": "google_container_node_pool",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "main-node-pool",
+            "location": "us-central1",
+            "cluster": "gke-gcp-test-prod",
+            "node_count": 2,
+            "node_config": {
+              "preemptible": false,
+              "machine_type": "n1-standard-2",
+              "disk_size_gb": 100,
+              "disk_type": "pd-standard",
+              "oauth_scopes": [
+                "https://www.googleapis.com/auth/cloud-platform"
+              ],
+              "tags": ["gke-node"],
+              "labels": {
+                "environment": "production"
+              }
+            },
+            "autoscaling": {
+              "min_node_count": 1,
+              "max_node_count": 4
+            }
+          }
+        },
+        {
+          "address": "google_artifact_registry_repository.main",
+          "mode": "managed",
+          "type": "google_artifact_registry_repository",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "repository_id": "artifact-registry-gcp-test-prod",
+            "location": "us-central1",
+            "format": "DOCKER",
+            "description": "Docker repository for GCP Test Production",
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_compute_global_address.main",
+          "mode": "managed",
+          "type": "google_compute_global_address",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "global-ip-gcp-test-prod",
+            "ip_version": "IPV4",
+            "address_type": "EXTERNAL"
+          }
+        },
+        {
+          "address": "google_compute_backend_service.main",
+          "mode": "managed",
+          "type": "google_compute_backend_service",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "backend-service-gcp-test-prod",
+            "protocol": "HTTP",
+            "port_name": "http",
+            "timeout_sec": 30,
+            "health_checks": ["https://www.googleapis.com/compute/v1/projects/gcp-test-prod/global/healthChecks/health-check-gcp-test-prod"],
+            "load_balancing_scheme": "EXTERNAL"
+          }
+        },
+        {
+          "address": "google_compute_url_map.main",
+          "mode": "managed",
+          "type": "google_compute_url_map",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "url-map-gcp-test-prod",
+            "default_service": "https://www.googleapis.com/compute/v1/projects/gcp-test-prod/global/backendServices/backend-service-gcp-test-prod"
+          }
+        },
+        {
+          "address": "google_compute_target_https_proxy.main",
+          "mode": "managed",
+          "type": "google_compute_target_https_proxy",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "https-proxy-gcp-test-prod",
+            "url_map": "https://www.googleapis.com/compute/v1/projects/gcp-test-prod/global/urlMaps/url-map-gcp-test-prod",
+            "ssl_certificates": ["https://www.googleapis.com/compute/v1/projects/gcp-test-prod/global/sslCertificates/ssl-cert-gcp-test-prod"]
+          }
+        },
+        {
+          "address": "google_logging_project_sink.main",
+          "mode": "managed",
+          "type": "google_logging_project_sink",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "logging-sink-gcp-test-prod",
+            "destination": "storage.googleapis.com/gcs-gcp-test-prod-logs",
+            "filter": "resource.type = gce_instance AND severity >= ERROR",
+            "unique_writer_identity": true
+          }
+        },
+        {
+          "address": "google_monitoring_notification_channel.main",
+          "mode": "managed",
+          "type": "google_monitoring_notification_channel",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "display_name": "DevOps Team Email",
+            "type": "email",
+            "labels": {
+              "email_address": "devops@company.com"
+            }
+          }
+        },
+        {
+          "address": "google_pubsub_topic.main",
+          "mode": "managed",
+          "type": "google_pubsub_topic",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "pubsub-topic-gcp-test-prod",
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_pubsub_subscription.main",
+          "mode": "managed",
+          "type": "google_pubsub_subscription",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "pubsub-subscription-gcp-test-prod",
+            "topic": "pubsub-topic-gcp-test-prod",
+            "ack_deadline_seconds": 20,
+            "message_retention_duration": "604800s",
+            "retain_acked_messages": true,
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_cloudfunctions_function.main",
+          "mode": "managed",
+          "type": "google_cloudfunctions_function",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "function-gcp-test-prod",
+            "runtime": "nodejs18",
+            "available_memory_mb": 256,
+            "source_archive_bucket": "gcs-gcp-test-prod-functions",
+            "source_archive_object": "function.zip",
+            "entry_point": "handler",
+            "trigger_http": true,
+            "https_trigger_security_level": "SECURE_ALWAYS",
+            "environment_variables": {
+              "ENVIRONMENT": "production",
+              "LOG_LEVEL": "info"
+            },
+            "labels": {
+              "environment": "production"
+            }
+          }
+        },
+        {
+          "address": "google_firestore_database.main",
+          "mode": "managed",
+          "type": "google_firestore_database",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "name": "(default)",
+            "location_id": "us-central",
+            "type": "FIRESTORE_NATIVE",
+            "concurrency_mode": "OPTIMISTIC"
+          }
+        },
+        {
+          "address": "google_bigquery_dataset.main",
+          "mode": "managed",
+          "type": "google_bigquery_dataset",
+          "name": "main",
+          "provider_name": "registry.terraform.io/hashicorp/google",
+          "values": {
+            "dataset_id": "bigquery_dataset_gcp_test_prod",
+            "location": "US",
+            "default_table_expiration_ms": 3600000,
+            "labels": {
+              "environment": "production"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "google_compute_network.main",
+      "mode": "managed",
+      "type": "google_compute_network",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "vpc-gcp-test-prod",
+          "auto_create_subnetworks": false
+        }
+      }
+    },
+    {
+      "address": "google_compute_subnetwork.web",
+      "mode": "managed",
+      "type": "google_compute_subnetwork",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "subnet-web-gcp-test-prod",
+          "ip_cidr_range": "10.0.1.0/24"
+        }
+      }
+    },
+    {
+      "address": "google_compute_subnetwork.database",
+      "mode": "managed",
+      "type": "google_compute_subnetwork",
+      "name": "database",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "subnet-database-gcp-test-prod",
+          "ip_cidr_range": "10.0.2.0/24"
+        }
+      }
+    },
+    {
+      "address": "google_compute_firewall.web",
+      "mode": "managed",
+      "type": "google_compute_firewall",
+      "name": "web",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "fw-allow-http-https"
+        }
+      }
+    },
+    {
+      "address": "google_storage_bucket.main",
+      "mode": "managed",
+      "type": "google_storage_bucket",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "gcs-gcp-test-prod-uploads-001"
+        }
+      }
+    },
+    {
+      "address": "google_storage_bucket_iam_binding.main",
+      "mode": "managed",
+      "type": "google_storage_bucket_iam_binding",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "bucket": "gcs-gcp-test-prod-uploads-001"
+        }
+      }
+    },
+    {
+      "address": "google_kms_key_ring.main",
+      "mode": "managed",
+      "type": "google_kms_key_ring",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "keyring-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_kms_crypto_key.main",
+      "mode": "managed",
+      "type": "google_kms_crypto_key",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "key-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_sql_database_instance.main",
+      "mode": "managed",
+      "type": "google_sql_database_instance",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "cloudsql-postgres-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_sql_database.main",
+      "mode": "managed",
+      "type": "google_sql_database",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "maindb"
+        }
+      }
+    },
+    {
+      "address": "google_sql_user.main",
+      "mode": "managed",
+      "type": "google_sql_user",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "dbadmin"
+        }
+      }
+    },
+    {
+      "address": "google_redis_instance.main",
+      "mode": "managed",
+      "type": "google_redis_instance",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "redis-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_container_cluster.main",
+      "mode": "managed",
+      "type": "google_container_cluster",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "gke-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_container_node_pool.main",
+      "mode": "managed",
+      "type": "google_container_node_pool",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "main-node-pool"
+        }
+      }
+    },
+    {
+      "address": "google_artifact_registry_repository.main",
+      "mode": "managed",
+      "type": "google_artifact_registry_repository",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "repository_id": "artifact-registry-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_compute_global_address.main",
+      "mode": "managed",
+      "type": "google_compute_global_address",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "global-ip-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_compute_backend_service.main",
+      "mode": "managed",
+      "type": "google_compute_backend_service",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "backend-service-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_compute_url_map.main",
+      "mode": "managed",
+      "type": "google_compute_url_map",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "url-map-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_compute_target_https_proxy.main",
+      "mode": "managed",
+      "type": "google_compute_target_https_proxy",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "https-proxy-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_logging_project_sink.main",
+      "mode": "managed",
+      "type": "google_logging_project_sink",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "logging-sink-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_monitoring_notification_channel.main",
+      "mode": "managed",
+      "type": "google_monitoring_notification_channel",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "display_name": "DevOps Team Email"
+        }
+      }
+    },
+    {
+      "address": "google_pubsub_topic.main",
+      "mode": "managed",
+      "type": "google_pubsub_topic",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "pubsub-topic-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_pubsub_subscription.main",
+      "mode": "managed",
+      "type": "google_pubsub_subscription",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "pubsub-subscription-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_cloudfunctions_function.main",
+      "mode": "managed",
+      "type": "google_cloudfunctions_function",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "function-gcp-test-prod"
+        }
+      }
+    },
+    {
+      "address": "google_firestore_database.main",
+      "mode": "managed",
+      "type": "google_firestore_database",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "(default)"
+        }
+      }
+    },
+    {
+      "address": "google_bigquery_dataset.main",
+      "mode": "managed",
+      "type": "google_bigquery_dataset",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "dataset_id": "bigquery_dataset_gcp_test_prod"
+        }
+      }
+    }
+  ]
+}

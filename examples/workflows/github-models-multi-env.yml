@@ -1,0 +1,76 @@
+name: Multi-Environment Review with GitHub Models
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read  # Required for GitHub Models
+
+jobs:
+  review-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v3
+      
+      - name: Review Dev Environment
+        run: |
+          cd terraform/dev
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+      
+      - name: AI Review - Dev
+        uses: thomast1906/terraform-ai-review-action@v1
+        with:
+          ai-provider: 'github-models'
+          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          github-models-model: 'gpt-4o-mini'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          terraform-plan-path: 'terraform/dev/tfplan.json'
+          terraform-directory: 'terraform/dev'
+          analysis-preset: 'quick-check'
+          analysis-depth: 'quick'
+          analysis-mode: 'plan-only'
+
+  review-prod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v3
+      
+      - name: Review Production Environment
+        run: |
+          cd terraform/prod
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+      
+      - name: AI Review - Production
+        uses: thomast1906/terraform-ai-review-action@v1
+        with:
+          ai-provider: 'github-models'
+          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          github-models-model: 'gpt-4o'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          terraform-plan-path: 'terraform/prod/tfplan.json'
+          terraform-directory: 'terraform/prod'
+          analysis-preset: 'production-ready'
+          analysis-depth: 'detailed'
+          analysis-mode: 'comprehensive'
+      
+      - name: Block if Critical Issues
+        run: |
+          if [ -f analysis_summary.json ]; then
+            HAS_ISSUES=$(jq -r '.has_critical_issues' analysis_summary.json)
+            if [ "$HAS_ISSUES" = "true" ]; then
+              echo "::error::Critical issues found in production deployment!"
+              exit 1
+            fi
+          fi

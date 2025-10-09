@@ -1,0 +1,37 @@
+name: Terraform Review with GitHub Models
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+
+permissions:
+  contents: read
+  pull-requests: write
+  models: read  # Required for GitHub Models
+
+jobs:
+  terraform-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v3
+      
+      - name: Terraform Init & Plan
+        run: |
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+      
+      - name: AI Review with GitHub Models
+        uses: thomast1906/terraform-ai-review-action@v1
+        with:
+          ai-provider: 'github-models'
+          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          github-models-model: 'gpt-4o'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          terraform-plan-path: 'tfplan.json'
+          analysis-preset: 'complete'
+          analysis-depth: 'standard'
