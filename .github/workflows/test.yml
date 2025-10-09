@@ -17,6 +17,8 @@ jobs:
   terraform-ai-review:
     runs-on: ubuntu-latest
     name: AI Review Terraform Changes
+    # Skip for Dependabot and Renovate PRs (they can't access secrets)
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
