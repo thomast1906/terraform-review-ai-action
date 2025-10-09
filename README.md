@@ -7,7 +7,7 @@
 
 **Transform your Terraform workflows with Terraform AI analysis.** This GitHub Action delivers expert-level code reviews powered by Azure OpenAI or GitHub Models, integrated with HashiCorp's official MCP Server for real-time provider documentation and module registry access. 
 
-**Analsze across 11 specialized domains** (security, cost, performance, reliability, compliance, observability, networking, data protection, governance, deployment safety, best practices) with **Customisable analysis presets** (security audit, cost optimisation, production-ready checks, quick scans), **flexible depth levels** (quick/standard/detailed), and **dual output styles** (severity-based or domain-grouped). 
+**Analyse across 11 specialized domains** (security, cost, performance, reliability, compliance, observability, networking, data protection, governance, deployment safety, best practices) with **Customisable analysis presets** (security audit, cost optimisation, production-ready checks, quick scans), **flexible depth levels** (quick/standard/detailed), and **dual output styles** (severity-based or domain-grouped). 
 
 **Every finding is automatically posted to your PRs** as intelligent comments with severity ratings, provider-specific recommendations, mitigation strategies, and compliance mappings. Works with **ANY Terraform provider**—from AWS, Azure, GCP, and Kubernetes to 1000+ community providers like Auth0, Datadog, MongoDB, Vault, and beyond. 
 
