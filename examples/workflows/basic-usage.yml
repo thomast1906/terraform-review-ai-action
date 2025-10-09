@@ -27,7 +27,7 @@ jobs:
       
       # Using Azure OpenAI
       - name: AI Review
-        uses: thomast1906/terraform-ai-review-action@v1
+        uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}

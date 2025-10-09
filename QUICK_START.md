@@ -65,7 +65,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-ai-review-action@v1
+        uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'github-models'
           github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -102,7 +102,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-ai-review-action@v1
+        uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -122,7 +122,7 @@ jobs:
 
 ### Quick Security Check (Fast)
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'github-models'
     github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -134,7 +134,7 @@ jobs:
 
 ### Production Deployment Review (Thorough)
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -147,7 +147,7 @@ jobs:
 
 ### Cost Optimisation Focus
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -159,7 +159,7 @@ jobs:
 
 ### Security Audit with GitHub Models
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'github-models'
     github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -191,7 +191,7 @@ jobs:
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
       
-      - uses: thomast1906/terraform-ai-review-action@v1
+      - uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'github-models'
           github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -247,8 +247,8 @@ permissions:
 
 ## Need Help?
 
-- 💬 [Start a discussion](https://github.com/thomast1906/terraform-ai-review-action/discussions)
-- 🐛 [Report an issue](https://github.com/thomast1906/terraform-ai-review-action/issues)
+- 💬 [Start a discussion](https://github.com/thomast1906/terraform-review-ai-action/discussions)
+- 🐛 [Report an issue](https://github.com/thomast1906/terraform-review-ai-action/issues)
 
 ---
 

@@ -1,9 +1,8 @@
 # Terraform AI Plan Review Action
 
-[![GitHub release](https://img.shields.io/github/release/thomast1906/terraform-ai-review-action.svg)](https://github.com/thomast1906/terraform-ai-review-action/releases)
-[![GitHub marketplace](https://img.shields.io/badge/marketplace-terraform--ai--review-blue?logo=github)](https://github.com/marketplace/actions/terraform-ai-plan-review)
+[![GitHub release](https://img.shields.io/github/release/thomast1906/terraform-review-ai-action.svg)](https://github.com/thomast1906/terraform-review-ai-action/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/thomast1906/terraform-ai-review-action/workflows/Build%20and%20Test/badge.svg)](https://github.com/thomast1906/terraform-ai-review-action/actions)
+[![CI](https://github.com/thomast1906/terraform-review-ai-action/workflows/Build%20and%20Test/badge.svg)](https://github.com/thomast1906/terraform-review-ai-action/actions)
 
 **Transform your Terraform workflows with Terraform AI analysis.** This GitHub Action delivers expert-level code reviews powered by Azure OpenAI or GitHub Models, integrated with HashiCorp's official MCP Server for real-time provider documentation and module registry access. 
 
@@ -60,7 +59,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-ai-review-action@v1
+        uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'github-models'
           github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +69,7 @@ jobs:
 ### Azure OpenAI
 
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -289,7 +288,7 @@ analysis-style: 'severity'
 ### Production Deployment
 
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -304,7 +303,7 @@ analysis-style: 'severity'
 ### Quick CI/CD Check
 
 ```yaml
-- uses: thomast1906/terraform-ai-review-action@v1
+- uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'github-models'
     github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -334,7 +333,7 @@ jobs:
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
       
-      - uses: thomast1906/terraform-ai-review-action@v1
+      - uses: thomast1906/terraform-review-ai-action@v1
         with:
           ai-provider: 'github-models'
           github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -397,7 +396,7 @@ permissions:
 ### Local Setup
 
 ```bash
-git clone https://github.com/thomast1906/terraform-ai-review-action.git
+git clone https://github.com/thomast1906/terraform-review-ai-action.git
 cd terraform-ai-review-action
 python3 -m venv venv
 source venv/bin/activate
@@ -418,10 +417,10 @@ python analyse_terraform.py
 
 ## Support
 
-- 📖 [Documentation](https://github.com/thomast1906/terraform-ai-review-action)
-- 🐛 [Report Issues](https://github.com/thomast1906/terraform-ai-review-action/issues)
-- 💡 [Request Features](https://github.com/thomast1906/terraform-ai-review-action/issues)
-- 💬 [Discussions](https://github.com/thomast1906/terraform-ai-review-action/discussions)
+- 📖 [Documentation](https://github.com/thomast1906/terraform-review-ai-action)
+- 🐛 [Report Issues](https://github.com/thomast1906/terraform-review-ai-action/issues)
+- 💡 [Request Features](https://github.com/thomast1906/terraform-review-ai-action/issues)
+- 💬 [Discussions](https://github.com/thomast1906/terraform-review-ai-action/discussions)
 
 ## License
 

@@ -208,7 +208,7 @@ strategy:
   matrix:
     directory: [terraform/dev, terraform/prod]
 steps:
-  - uses: thomast1906/terraform-ai-review-action@v1
+  - uses: thomast1906/terraform-review-ai-action@v1
     with:
       ai-provider: 'github-models'
       github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -223,7 +223,7 @@ Check the outputs:
 
 ```yaml
 - id: review
-  uses: thomast1906/terraform-ai-review-action@v1
+  uses: thomast1906/terraform-review-ai-action@v1
   with:
     ai-provider: 'github-models'
     github-models-token: ${{ secrets.GITHUB_TOKEN }}
@@ -316,6 +316,6 @@ Absolutely! Use the feature request template.
 ## Still Have Questions?
 
 - 📖 Check the [README.md](README.md)
-- 💬 Open a [Discussion](https://github.com/thomast1906/terraform-ai-review-action/discussions)
-- 🐛 Report [Issues](https://github.com/thomast1906/terraform-ai-review-action/issues)
+- 💬 Open a [Discussion](https://github.com/thomast1906/terraform-review-ai-action/discussions)
+- 🐛 Report [Issues](https://github.com/thomast1906/terraform-review-ai-action/issues)
 - 📧 Contact the maintainer
