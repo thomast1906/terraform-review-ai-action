@@ -962,9 +962,8 @@ jobs:
       - scenario-cost-review
       - scenario-pre-production
     runs-on: ubuntu-latest
-    # Skip for Dependabot and Renovate PRs (they can't access secrets)
-    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
-    if: github.event_name == 'pull_request' && always()
+    # Skip for Dependabot and Renovate PRs, only run on pull requests
+    if: github.event_name == 'pull_request' && always() && github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     
     steps:
     - name: Download All Analyses
