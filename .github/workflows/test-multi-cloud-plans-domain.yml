@@ -40,7 +40,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload Azure Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: azure-analysis-${{ github.run_id }}
@@ -71,7 +71,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload AWS Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: aws-analysis-${{ github.run_id }}
@@ -102,7 +102,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload GCP Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: gcp-analysis-${{ github.run_id }}
@@ -134,7 +134,7 @@ jobs:
         show-mcp-details: 'true'
 
     - name: Upload Other Providers Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: other-analysis-${{ github.run_id }}
