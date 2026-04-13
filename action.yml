@@ -226,7 +226,7 @@ runs:
 
     - name: Comment on PR
       if: github.event_name == 'pull_request' && inputs.disable-pr-comment != 'true'
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       with:
         github-token: ${{ inputs.github-token }}
         script: |
