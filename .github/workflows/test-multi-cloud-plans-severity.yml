@@ -23,7 +23,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Azure AI Review
       uses: ./
@@ -55,7 +55,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run AWS AI Review
       uses: ./
@@ -86,7 +86,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run GCP AI Review
       uses: ./
@@ -116,7 +116,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     
     - name: Run Other Providers AI Review

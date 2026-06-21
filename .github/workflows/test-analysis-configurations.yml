@@ -22,7 +22,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Audit Analysis
       uses: ./
@@ -54,7 +54,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost Optimization Analysis
       uses: ./
@@ -86,7 +86,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Production Readiness Analysis
       uses: ./
@@ -118,7 +118,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Quick Check Analysis
       uses: ./
@@ -150,7 +150,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Complete Analysis
       uses: ./
@@ -183,7 +183,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Quick Depth Analysis
       uses: ./
@@ -214,7 +214,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Standard Depth Analysis
       uses: ./
@@ -246,7 +246,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Detailed Depth Analysis
       uses: ./
@@ -279,7 +279,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Severity Style Analysis
       uses: ./
@@ -311,7 +311,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Domain Style Analysis
       uses: ./
@@ -344,7 +344,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Plan-Only Mode Analysis
       uses: ./
@@ -376,7 +376,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Comprehensive Mode Analysis
       uses: ./
@@ -411,7 +411,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Focus Analysis
       uses: ./
@@ -444,7 +444,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost & Performance Analysis
       uses: ./
@@ -477,7 +477,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Reliability & Observability Analysis
       uses: ./
@@ -509,7 +509,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Networking & Data Analysis
       uses: ./
@@ -542,7 +542,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Compliance & Governance Analysis
       uses: ./
@@ -576,7 +576,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Deployment Focus Analysis
       uses: ./
@@ -609,7 +609,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Best Practices Focus Analysis
       uses: ./
@@ -641,7 +641,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Compliance Focus Analysis
       uses: ./
@@ -674,7 +674,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Performance Focus Analysis
       uses: ./
@@ -707,7 +707,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Governance Focus Analysis
       uses: ./
@@ -740,7 +740,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Analysis with MCP Details
       uses: ./
@@ -772,7 +772,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Analysis without MCP
       uses: ./
@@ -804,7 +804,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Fast CI/CD Scenario
       uses: ./
@@ -836,7 +836,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Audit Scenario
       uses: ./
@@ -870,7 +870,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost Review Scenario
       uses: ./
@@ -902,7 +902,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Pre-Production Scenario
       uses: ./
