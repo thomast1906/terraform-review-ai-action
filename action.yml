@@ -1,5 +1,5 @@
 name: 'Terraform AI Plan Review'
-description: 'AI-powered review of Terraform plans using Azure OpenAI or GitHub Models and HashiCorp Terraform MCP Server'
+description: 'AI-powered review of Terraform plans using Microsoft Foundry (GPT-5 or Claude models) and HashiCorp Terraform MCP Server'
 branding:
   icon: 'shield'
   color: 'purple'
@@ -7,35 +7,22 @@ branding:
 inputs:
   # AI Provider Configuration
   ai-provider:
-    description: 'AI provider: "azure" for Azure OpenAI or "github-models" for GitHub Models'
+    description: 'AI provider on Microsoft Foundry: "azure" for OpenAI-compatible models (e.g. GPT-5) or "azure-anthropic" for Claude models'
     required: false
-    default: 'github-models'
-  
-  # Azure OpenAI Configuration
+    default: 'azure'
+
+  # Microsoft Foundry / Azure OpenAI Configuration
   azure-openai-api-key:
-    description: 'Azure OpenAI API key'
+    description: 'Microsoft Foundry / Azure OpenAI API key'
     required: false
   azure-openai-endpoint:
-    description: 'Azure OpenAI endpoint URL'
+    description: 'Microsoft Foundry / Azure OpenAI resource endpoint URL (e.g. https://<resource-name>.openai.azure.com)'
     required: false
-  azure-openai-api-version:
-    description: 'Azure OpenAI API version'
-    required: false
-    default: '2024-02-01'
   azure-openai-deployment:
-    description: 'Azure OpenAI deployment name'
+    description: 'Model deployment name on your Foundry resource (e.g. a GPT-5 deployment for "azure", a Claude deployment for "azure-anthropic")'
     required: false
-    default: 'gpt-4'
-  
-  # GitHub Models Configuration
-  github-models-token:
-    description: 'GitHub token for GitHub Models API (can use GITHUB_TOKEN)'
-    required: false
-  github-models-model:
-    description: 'GitHub Models model name'
-    required: false
-    default: 'gpt-5'
-  
+    default: 'gpt-5-mini'
+
   # Terraform Configuration
   terraform-plan-path:
     description: 'Path to the Terraform plan JSON file'
@@ -132,7 +119,7 @@ runs:
   using: 'composite'
   steps:
     - name: Setup Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: '3.13'
 
@@ -158,17 +145,17 @@ runs:
           exit 0
         fi
         
-        # Pull the latest MCP server image
+        # Pull a pinned MCP server image (not :latest, to avoid silent supply-chain drift)
         echo "Pulling HashiCorp Terraform MCP Server image..."
-        if ! docker pull hashicorp/terraform-mcp-server:latest; then
+        if ! docker pull hashicorp/terraform-mcp-server:1.2.0; then
           echo "Warning: Failed to pull MCP server image, continuing without MCP validation"
           echo "mcp_available=false" >> $GITHUB_OUTPUT
           exit 0
         fi
-        
+
         # Test JSON-RPC stdio mode
         echo "Testing MCP server JSON-RPC stdio mode..."
-        if echo '{"jsonrpc": "2.0", "id": "test", "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "1.0.0"}}}' | timeout 15 docker run --rm -i hashicorp/terraform-mcp-server:latest 2>/dev/null | grep -q '"result"'; then
+        if echo '{"jsonrpc": "2.0", "id": "test", "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "1.0.0"}}}' | timeout 15 docker run --rm -i hashicorp/terraform-mcp-server:1.2.0 2>/dev/null | grep -q '"result"'; then
           echo "MCP server JSON-RPC stdio mode is working"
           echo "mcp_available=true" >> $GITHUB_OUTPUT
         else
@@ -183,10 +170,7 @@ runs:
         AI_PROVIDER: ${{ inputs.ai-provider }}
         AZURE_OPENAI_API_KEY: ${{ inputs.azure-openai-api-key }}
         AZURE_OPENAI_ENDPOINT: ${{ inputs.azure-openai-endpoint }}
-        AZURE_OPENAI_API_VERSION: ${{ inputs.azure-openai-api-version }}
         AZURE_OPENAI_DEPLOYMENT: ${{ inputs.azure-openai-deployment }}
-        GITHUB_MODELS_TOKEN: ${{ inputs.github-models-token }}
-        GITHUB_MODELS_MODEL: ${{ inputs.github-models-model }}
         TERRAFORM_PLAN_PATH: ${{ inputs.terraform-plan-path }}
         TERRAFORM_DIRECTORY: ${{ inputs.terraform-directory }}
         ANALYSIS_PRESET: ${{ inputs.analysis-preset }}
@@ -226,7 +210,7 @@ runs:
 
     - name: Comment on PR
       if: github.event_name == 'pull_request' && inputs.disable-pr-comment != 'true'
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -251,7 +235,7 @@ runs:
             comment.body.includes('Terraform AI Plan Analysis')
           );
           
-          const commentBody = analysis + '\n\n---\n*Analysis powered by Azure OpenAI/GitHub Models and HashiCorp Terraform MCP Server*\n*Action: [terraform-ai-review](https://github.com/marketplace/actions/terraform-ai-plan-review)*';
+          const commentBody = analysis + '\n\n---\n*Analysis powered by Microsoft Foundry and HashiCorp Terraform MCP Server*\n*Action: [terraform-ai-review](https://github.com/marketplace/actions/terraform-ai-plan-review)*';
           
           if (botComment) {
             // Update existing comment

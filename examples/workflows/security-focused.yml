@@ -13,13 +13,12 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  models: read  # Required for GitHub Models
 
 jobs:
   security-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - uses: hashicorp/setup-terraform@v3
       
@@ -43,7 +42,7 @@ jobs:
       
       - name: Upload Security Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-audit-report
           path: ai_analysis.md
@@ -51,7 +50,7 @@ jobs:
       
       - name: Create Issue if Critical Findings
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

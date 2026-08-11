@@ -208,7 +208,7 @@ class TestTerraformAnalyser(unittest.TestCase):
             ]
         }
         
-        with patch.object(TerraformAnalyser, '_init_openai_client', return_value=Mock()), \
+        with patch.object(TerraformAnalyser, '_init_ai_client', return_value=Mock()), \
              patch.object(TerraformAnalyser, '_validate_inputs', return_value=None):
             analyser = TerraformAnalyser(self.config)
             changes, resource_types, action_counts = analyser.format_plan_changes(plan_data)
@@ -234,7 +234,7 @@ class TestTerraformAnalyser(unittest.TestCase):
             ]
         }
         
-        with patch.object(TerraformAnalyser, '_init_openai_client', return_value=Mock()), \
+        with patch.object(TerraformAnalyser, '_init_ai_client', return_value=Mock()), \
              patch.object(TerraformAnalyser, '_validate_inputs', return_value=None):
             analyser = TerraformAnalyser(self.config)
             changes, _, action_counts = analyser.format_plan_changes(plan_data)

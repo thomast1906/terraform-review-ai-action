@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/thomast1906/terraform-review-ai-action/workflows/Build%20and%20Test/badge.svg)](https://github.com/thomast1906/terraform-review-ai-action/actions)
 
-**Transform your Terraform workflows with Terraform AI analysis.** This GitHub Action delivers expert-level code reviews powered by Azure OpenAI or GitHub Models, integrated with HashiCorp's official MCP Server for real-time provider documentation and module registry access. 
+**Transform your Terraform workflows with Terraform AI analysis.** This GitHub Action delivers expert-level code reviews powered by [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/) (GPT-5 family or Claude models, on the same Azure resource), integrated with HashiCorp's official MCP Server for real-time provider documentation and module registry access. 
 
 **Analyse across 11 specialized domains** (security, cost, performance, reliability, compliance, observability, networking, data protection, governance, deployment safety, best practices) with **Customisable analysis presets** (security audit, cost optimisation, production-ready checks, quick scans), **flexible depth levels** (quick/standard/detailed), and **dual output styles** (severity-based or domain-grouped). 
 
@@ -13,7 +13,7 @@
 ## Features
 
 - 💬 **Automated PR Comments** - AI analysis posted directly to pull requests for team visibility
-- 🤖 **Dual AI Providers** - Azure OpenAI or GitHub Models integration
+- 🤖 **Microsoft Foundry** - GPT-5 family or Claude models, on your own Azure resource
 - 🏗️ **HashiCorp MCP** - Official Terraform MCP Server for enhanced validation
 - 🌐 **Universal Support** - Works with any Terraform provider (AWS, Azure, GCP, Kubernetes, etc.)
 - 🔒 **11 Focus Areas** - Security, cost, performance, reliability, compliance, and more
@@ -42,13 +42,12 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read  # Required for GitHub Models
 
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       
       - uses: hashicorp/setup-terraform@v3
       
@@ -61,23 +60,27 @@ jobs:
       - name: AI Review
         uses: thomast1906/terraform-review-ai-action@v1
         with:
-          ai-provider: 'github-models'
-          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          ai-provider: 'azure'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          analysis-preset: 'production-ready'
+          analysis-depth: 'detailed'
 ```
 
-### Azure OpenAI
+### Claude on Microsoft Foundry
+
+Both providers run on the same Foundry resource (same endpoint and API key) - just switch `ai-provider` and point `azure-openai-deployment` at your Claude deployment:
 
 ```yaml
 - uses: thomast1906/terraform-review-ai-action@v1
   with:
-    ai-provider: 'azure'
+    ai-provider: 'azure-anthropic'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
     azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    azure-openai-deployment: 'gpt-4'
+    azure-openai-deployment: 'claude-sonnet-5'
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    analysis-preset: 'production-ready'
-    analysis-depth: 'detailed'
 ```
 
 ## Configuration
@@ -87,21 +90,16 @@ jobs:
 #### AI Provider
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `ai-provider` | AI provider: `azure` or `github-models` | ❌ | `github-models` |
+| `ai-provider` | AI provider on Microsoft Foundry: `azure` (OpenAI-compatible models, e.g. GPT-5) or `azure-anthropic` (Claude models) | ❌ | `azure` |
 
-#### Azure OpenAI
+#### Microsoft Foundry / Azure OpenAI
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `azure-openai-api-key` | Azure OpenAI API key | ❌* | - |
-| `azure-openai-endpoint` | Azure OpenAI endpoint URL | ❌* | - |
-| `azure-openai-api-version` | Azure OpenAI API version | ❌ | `2024-02-01` |
-| `azure-openai-deployment` | Azure OpenAI deployment name | ❌ | `gpt-4` |
+| `azure-openai-api-key` | Foundry / Azure OpenAI API key | ✅ | - |
+| `azure-openai-endpoint` | Foundry resource endpoint URL (e.g. `https://<resource>.openai.azure.com`) | ✅ | - |
+| `azure-openai-deployment` | Model deployment name on your Foundry resource | ❌ | `gpt-5-mini` |
 
-#### GitHub Models
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `github-models-token` | GitHub token for GitHub Models | ❌* | - |
-| `github-models-model` | GitHub Models model name | ❌ | `gpt-5` |
+Both providers use the same three inputs above - they share one Foundry resource, differentiated only by `ai-provider` and which deployment name you point at.
 
 #### Terraform Configuration
 | Input | Description | Required | Default |
@@ -148,8 +146,6 @@ jobs:
 | `api-max-retries` | Maximum API retry attempts with exponential backoff | ❌ | `3` |
 
 </details>
-
-*Required based on selected AI provider
 
 ### Outputs
 
@@ -293,7 +289,7 @@ analysis-style: 'severity'
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
     azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    azure-openai-deployment: 'gpt-4'
+    azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
     analysis-preset: 'production-ready'
     analysis-depth: 'detailed'
@@ -305,8 +301,10 @@ analysis-style: 'severity'
 ```yaml
 - uses: thomast1906/terraform-review-ai-action@v1
   with:
-    ai-provider: 'github-models'
-    github-models-token: ${{ secrets.GITHUB_TOKEN }}
+    ai-provider: 'azure'
+    azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
     analysis-preset: 'quick-check'
     analysis-depth: 'quick'
@@ -323,7 +321,7 @@ jobs:
       matrix:
         environment: [dev, staging, prod]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
       
       - name: Terraform Plan
@@ -335,8 +333,10 @@ jobs:
       
       - uses: thomast1906/terraform-review-ai-action@v1
         with:
-          ai-provider: 'github-models'
-          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          ai-provider: 'azure'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           terraform-plan-path: ./environments/${{ matrix.environment }}/tfplan.json
           terraform-directory: ./environments/${{ matrix.environment }}
@@ -370,26 +370,14 @@ mcp-server-timeout: 60
 
 ## Required Secrets
 
-### Azure OpenAI
+### Microsoft Foundry (both `azure` and `azure-anthropic`)
 ```bash
 AZURE_OPENAI_API_KEY=<your-key>
-AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
 AZURE_OPENAI_DEPLOYMENT=<deployment-name>
 ```
 
-### GitHub Models
-```bash
-GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}  # Built-in token
-```
-
-**Important:** Add `models: read` permission for GitHub Models:
-
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-  models: read  # Required
-```
+`GITHUB_TOKEN` for PR comments is provided automatically by GitHub Actions - no secret to configure.
 
 ## Development
 

@@ -195,5 +195,5 @@ This analysis reviews your planned Azure Terraform deployment, which will create
 Apply these changes before production deployment to ensure secure, compliant, and cost-effective infrastructure.
 
 ---
-*Analysis powered by Azure OpenAI/GitHub Models and HashiCorp Terraform MCP Server*
+*Analysis powered by Microsoft Foundry and HashiCorp Terraform MCP Server*
 *Action: [terraform-ai-review](https://github.com/marketplace/actions/terraform-ai-plan-review)*

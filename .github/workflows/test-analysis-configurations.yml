@@ -11,7 +11,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
 
 jobs:
   # Analysis Preset Tests
@@ -22,7 +21,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Audit Analysis
       uses: ./
@@ -40,7 +39,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: preset-security-audit-${{ github.run_id }}
@@ -54,7 +53,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost Optimization Analysis
       uses: ./
@@ -72,7 +71,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: preset-cost-optimisation-${{ github.run_id }}
@@ -86,7 +85,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Production Readiness Analysis
       uses: ./
@@ -104,7 +103,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: preset-production-ready-${{ github.run_id }}
@@ -118,14 +117,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Quick Check Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o-mini'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: 'quick-check'
@@ -136,7 +136,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: preset-quick-check-${{ github.run_id }}
@@ -150,7 +150,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Complete Analysis
       uses: ./
@@ -168,7 +168,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: preset-complete-${{ github.run_id }}
@@ -183,14 +183,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Quick Depth Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o-mini'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-focus: 'security,cost,best-practices'
@@ -200,7 +201,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: depth-quick-${{ github.run_id }}
@@ -214,7 +215,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Standard Depth Analysis
       uses: ./
@@ -232,7 +233,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: depth-standard-${{ github.run_id }}
@@ -246,7 +247,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Detailed Depth Analysis
       uses: ./
@@ -264,7 +265,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: depth-detailed-${{ github.run_id }}
@@ -279,7 +280,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Severity Style Analysis
       uses: ./
@@ -297,7 +298,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: style-severity-${{ github.run_id }}
@@ -311,7 +312,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Domain Style Analysis
       uses: ./
@@ -329,7 +330,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: style-domain-${{ github.run_id }}
@@ -344,14 +345,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Plan-Only Mode Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: 'quick-check'
@@ -362,7 +364,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: mode-plan-only-${{ github.run_id }}
@@ -376,7 +378,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Comprehensive Mode Analysis
       uses: ./
@@ -396,7 +398,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: mode-comprehensive-${{ github.run_id }}
@@ -411,7 +413,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Focus Analysis
       uses: ./
@@ -430,7 +432,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-security-only-${{ github.run_id }}
@@ -444,7 +446,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost & Performance Analysis
       uses: ./
@@ -463,7 +465,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-cost-performance-${{ github.run_id }}
@@ -477,14 +479,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Reliability & Observability Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: ''
@@ -495,7 +498,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-reliability-observability-${{ github.run_id }}
@@ -509,7 +512,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Networking & Data Analysis
       uses: ./
@@ -528,7 +531,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-networking-data-${{ github.run_id }}
@@ -542,7 +545,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Compliance & Governance Analysis
       uses: ./
@@ -561,7 +564,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-compliance-governance-${{ github.run_id }}
@@ -576,7 +579,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Deployment Focus Analysis
       uses: ./
@@ -595,7 +598,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-deployment-only-${{ github.run_id }}
@@ -609,14 +612,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Best Practices Focus Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: ''
@@ -627,7 +631,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-best-practices-only-${{ github.run_id }}
@@ -641,7 +645,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Compliance Focus Analysis
       uses: ./
@@ -660,7 +664,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-compliance-only-${{ github.run_id }}
@@ -674,7 +678,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Performance Focus Analysis
       uses: ./
@@ -693,7 +697,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-performance-only-${{ github.run_id }}
@@ -707,14 +711,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Governance Focus Analysis
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: ''
@@ -725,7 +730,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: focus-governance-only-${{ github.run_id }}
@@ -740,7 +745,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Analysis with MCP Details
       uses: ./
@@ -758,7 +763,7 @@ jobs:
         disable-pr-comment: 'true'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: mcp-enabled-detailed-${{ github.run_id }}
@@ -772,7 +777,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Analysis without MCP
       uses: ./
@@ -789,7 +794,7 @@ jobs:
         disable-pr-comment: 'true'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: mcp-disabled-${{ github.run_id }}
@@ -804,14 +809,15 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Fast CI/CD Scenario
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
-        github-models-model: 'gpt-4o-mini'
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         analysis-preset: 'quick-check'
@@ -822,7 +828,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: scenario-fast-cicd-${{ github.run_id }}
@@ -836,7 +842,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Security Audit Scenario
       uses: ./
@@ -856,7 +862,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: scenario-security-audit-${{ github.run_id }}
@@ -870,7 +876,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Cost Review Scenario
       uses: ./
@@ -888,7 +894,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: scenario-cost-review-${{ github.run_id }}
@@ -902,7 +908,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Pre-Production Scenario
       uses: ./
@@ -922,7 +928,7 @@ jobs:
         skip-mcp-validation: 'false'
 
     - name: Upload Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: scenario-pre-production-${{ github.run_id }}
@@ -967,12 +973,12 @@ jobs:
     
     steps:
     - name: Download All Analyses
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: analyses
 
     - name: Create Combined PR Comments
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |

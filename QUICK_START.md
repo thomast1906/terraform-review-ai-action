@@ -5,20 +5,12 @@ Get started with Terraform AI Review Action in under 5 minutes!
 ## Prerequisites
 
 - GitHub repository with Terraform code
-- Azure OpenAI access OR GitHub account (for GitHub Models)
+- A [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/) resource with a model deployed (GPT-5 family, or Claude)
 - GitHub Actions enabled
 
 ## Step 1: Configure Secrets
 
-### Option 1: GitHub Models (Recommended - No Setup Required!)
-
-GitHub Models uses your existing GitHub token - no additional setup needed!
-
-Just ensure your workflow has the `models: read` permission.
-
-### Option 2: Azure OpenAI
-
-Add your Azure OpenAI credentials to GitHub Secrets:
+Add your Foundry credentials to GitHub Secrets:
 
 1. Go to your repository → **Settings** → **Secrets and variables** → **Actions**
 2. Click **New repository secret**
@@ -26,53 +18,17 @@ Add your Azure OpenAI credentials to GitHub Secrets:
 
 ```
 AZURE_OPENAI_API_KEY=your-api-key-here
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 ```
+
+The same three secrets work for both provider options below - only `ai-provider` and the deployment name change.
 
 ## Step 2: Create Workflow File
 
 Create `.github/workflows/terraform-review.yml`:
 
-### Using GitHub Models (Simplest)
-
-```yaml
-name: Terraform AI Review
-
-on:
-  pull_request:
-    paths:
-      - '**.tf'
-      - '**.tfvars'
-
-permissions:
-  contents: read
-  pull-requests: write
-  models: read  # Required for GitHub Models
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      
-      - uses: hashicorp/setup-terraform@v3
-      
-      - name: Generate Terraform Plan
-        run: |
-          terraform init
-          terraform plan -out=tfplan.binary
-          terraform show -json tfplan.binary > tfplan.json
-      
-      - name: AI Review
-        uses: thomast1906/terraform-review-ai-action@v1
-        with:
-          ai-provider: 'github-models'
-          github-models-token: ${{ secrets.GITHUB_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Using Azure OpenAI
+### Using GPT-5 family models
 
 ```yaml
 name: Terraform AI Review
@@ -91,7 +47,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       
       - uses: hashicorp/setup-terraform@v3
       
@@ -111,6 +67,47 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+### Using Claude models
+
+Same secrets, same Foundry resource - just switch the provider and deployment:
+
+```yaml
+name: Terraform AI Review
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      
+      - uses: hashicorp/setup-terraform@v3
+      
+      - name: Generate Terraform Plan
+        run: |
+          terraform init
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+      
+      - name: AI Review
+        uses: thomast1906/terraform-review-ai-action@v1
+        with:
+          ai-provider: 'azure-anthropic'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## Step 3: Test It!
 
 1. Create a new branch
@@ -124,8 +121,10 @@ jobs:
 ```yaml
 - uses: thomast1906/terraform-review-ai-action@v1
   with:
-    ai-provider: 'github-models'
-    github-models-token: ${{ secrets.GITHUB_TOKEN }}
+    ai-provider: 'azure'
+    azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
     analysis-preset: 'quick-check'
     analysis-depth: 'quick'
@@ -157,13 +156,14 @@ jobs:
     analysis-preset: 'cost-optimisation'
 ```
 
-### Security Audit with GitHub Models
+### Security Audit with Claude
 ```yaml
 - uses: thomast1906/terraform-review-ai-action@v1
   with:
-    ai-provider: 'github-models'
-    github-models-token: ${{ secrets.GITHUB_TOKEN }}
-    github-models-model: 'gpt-4o'  # Or gpt-4o-mini for faster analysis
+    ai-provider: 'azure-anthropic'
+    azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    azure-openai-deployment: 'claude-sonnet-5'
     github-token: ${{ secrets.GITHUB_TOKEN }}
     analysis-preset: 'security-audit'
     analysis-depth: 'detailed'
@@ -181,7 +181,7 @@ jobs:
       matrix:
         directory: [terraform/dev, terraform/staging, terraform/prod]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
       
       - name: Terraform Plan
@@ -193,8 +193,10 @@ jobs:
       
       - uses: thomast1906/terraform-review-ai-action@v1
         with:
-          ai-provider: 'github-models'
-          github-models-token: ${{ secrets.GITHUB_TOKEN }}
+          ai-provider: 'azure'
+          azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           terraform-plan-path: '${{ matrix.directory }}/tfplan.json'
           terraform-directory: '${{ matrix.directory }}'
@@ -210,17 +212,8 @@ jobs:
     terraform show -json tfplan.binary > tfplan.json
 ```
 
-### ❌ "GitHub Models 401 Unauthorized"
-**Solution**: Add `models: read` permission to your workflow:
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-  models: read  # Required for GitHub Models
-```
-
-### ❌ "Azure OpenAI API error"
-**Solution**: Verify your secrets are correctly configured in GitHub Settings
+### ❌ "AI API error" / 401 Unauthorized
+**Solution**: Verify `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, and `AZURE_OPENAI_DEPLOYMENT` are correctly configured in GitHub Settings, and that the deployment name matches what's deployed on your Foundry resource for the selected `ai-provider`.
 
 ### ❌ "No PR comment created"
 **Solution**: Add `pull-requests: write` permission to your workflow
@@ -230,13 +223,12 @@ permissions:
 
 ## AI Provider Comparison
 
-| Feature | GitHub Models | Azure OpenAI |
-|---------|--------------|--------------|
-| **Setup** | ✅ No setup needed | ⚠️ Requires Azure account |
-| **Cost** | ✅ Free (with limits) | 💰 Pay per token |
-| **Models** | gpt-4o, gpt-4o-mini | Custom deployments |
-| **Authentication** | GitHub token | API key |
-| **Rate Limits** | GitHub tier-based | Your quota |
+| Feature | `azure` (GPT-5 family) | `azure-anthropic` (Claude) |
+|---------|-------------------------|------------------------------|
+| **Setup** | Foundry resource + deployment | Same Foundry resource + a Claude deployment |
+| **API shape** | OpenAI-compatible (`/openai/v1/`) | Anthropic Messages API (`/anthropic`) |
+| **Credentials** | `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` | Same secrets, same resource |
+| **Billing** | Azure OpenAI consumption | Claude Consumption Units (Azure Marketplace) |
 
 ## What's Next?
 

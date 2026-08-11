@@ -2,5 +2,16 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^action\\.yml$/"],
+      "matchStrings": [
+        "hashicorp/terraform-mcp-server:(?<currentValue>[\\w.-]+)"
+      ],
+      "depNameTemplate": "hashicorp/terraform-mcp-server",
+      "datasourceTemplate": "docker"
+    }
   ]
 }

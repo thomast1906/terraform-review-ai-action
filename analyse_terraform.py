@@ -20,13 +20,10 @@ from dataclasses import dataclass
 @dataclass
 class AnalysisConfig:
     """Configuration for the analysis"""
-    ai_provider: str = "azure"  # "azure" or "github-models"
+    ai_provider: str = "azure"  # "azure" (OpenAI-compatible models) or "azure-anthropic" (Claude models), both on Microsoft Foundry
     azure_openai_api_key: Optional[str] = None
     azure_openai_endpoint: Optional[str] = None
-    azure_openai_api_version: str = "2024-02-01"
-    azure_openai_deployment: str = "gpt-4"
-    github_models_token: Optional[str] = None
-    github_models_model: str = "gpt-4o"
+    azure_openai_deployment: str = "gpt-5-mini"
     terraform_plan_path: str = "tfplan.json"
     terraform_directory: str = "."
     analysis_focus: List[str] = None
@@ -567,37 +564,109 @@ class TerraformMCPClient:
         return list(providers)
 
 
+class AIProvider:
+    """Base interface implemented by each supported AI provider.
+
+    Every provider isolates its client construction, model-name resolution, and
+    request/response shape in one place, so adding a provider is a single new
+    class + registry entry rather than a scattered set of if/elif branches.
+    """
+
+    def init_client(self, config: AnalysisConfig):
+        raise NotImplementedError
+
+    def model_name(self, config: AnalysisConfig) -> str:
+        return config.azure_openai_deployment
+
+    def complete(self, client, model: str, system_content: str, user_content: str,
+                 temperature: float, max_tokens: int, timeout_seconds: int) -> str:
+        raise NotImplementedError
+
+
+class AzureOpenAIProvider(AIProvider):
+    """OpenAI-compatible models (e.g. GPT-5 family) on Microsoft Foundry, via the v1 API.
+
+    The v1 API removes the need for a dated `api-version` parameter: the OpenAI
+    client is pointed at `<endpoint>/openai/v1/` instead of using AzureOpenAI().
+    """
+
+    def init_client(self, config: AnalysisConfig):
+        from openai import OpenAI
+        base_url = config.azure_openai_endpoint.rstrip('/') + '/openai/v1/'
+        return OpenAI(api_key=config.azure_openai_api_key, base_url=base_url)
+
+    def complete(self, client, model, system_content, user_content, temperature, max_tokens, timeout_seconds):
+        # GPT-5 family models use max_completion_tokens instead of max_tokens
+        use_max_completion_tokens = 'gpt-5' in model.lower()
+
+        api_params = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content}
+            ],
+            "temperature": temperature,
+            "presence_penalty": 0.1,  # Reduce repetition
+            "frequency_penalty": 0.1,  # Encourage diverse language
+            "timeout": timeout_seconds
+        }
+        if use_max_completion_tokens:
+            api_params["max_completion_tokens"] = max_tokens
+        else:
+            api_params["max_tokens"] = max_tokens
+
+        response = client.chat.completions.create(**api_params)
+        return response.choices[0].message.content
+
+
+class AzureAnthropicProvider(AIProvider):
+    """Claude models on Microsoft Foundry, via the native Anthropic Messages API.
+
+    Claude on Foundry is not exposed through the OpenAI-compatible endpoint - it's
+    called through the Anthropic Messages API at `<endpoint>/anthropic`, using the
+    `anthropic` package's AnthropicFoundry client (same Azure resource, different
+    request/response shape: top-level `system`, `content` blocks in the response).
+    """
+
+    def init_client(self, config: AnalysisConfig):
+        from anthropic import AnthropicFoundry
+        base_url = config.azure_openai_endpoint.rstrip('/') + '/anthropic'
+        return AnthropicFoundry(api_key=config.azure_openai_api_key, base_url=base_url)
+
+    def complete(self, client, model, system_content, user_content, temperature, max_tokens, timeout_seconds):
+        message = client.messages.create(
+            model=model,
+            system=system_content,
+            messages=[{"role": "user", "content": user_content}],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            timeout=timeout_seconds
+        )
+        return "".join(block.text for block in message.content if getattr(block, "type", None) == "text")
+
+
+PROVIDERS: Dict[str, AIProvider] = {
+    "azure": AzureOpenAIProvider(),
+    "azure-anthropic": AzureAnthropicProvider(),
+}
+
+
 class TerraformAnalyser:
     """Main Terraform analysis class"""
-    
+
     def __init__(self, config: AnalysisConfig):
         self.config = config
         self._validate_inputs()  # Validate all inputs before processing
         self.mcp_client = TerraformMCPClient() if not config.skip_mcp else None
-        self.openai_client = self._init_openai_client()
-    
-    def _init_openai_client(self):
-        """Initialize AI client for Azure OpenAI or GitHub Models"""
+        self.provider = PROVIDERS[self.config.ai_provider]
+        self.ai_client = self._init_ai_client()
+
+    def _init_ai_client(self):
+        """Initialize the AI client for the configured provider"""
         try:
-            if self.config.ai_provider == 'github-models':
-                # GitHub Models using OpenAI-compatible API
-                from openai import OpenAI
-                return OpenAI(
-                    api_key=self.config.github_models_token,
-                    base_url="https://models.inference.ai.azure.com"
-                )
-            elif self.config.ai_provider == 'azure':
-                # Azure OpenAI
-                from openai import AzureOpenAI
-                return AzureOpenAI(
-                    api_key=self.config.azure_openai_api_key,
-                    api_version=self.config.azure_openai_api_version,
-                    azure_endpoint=self.config.azure_openai_endpoint
-                )
-            else:
-                raise ValueError(f"Unsupported AI provider: {self.config.ai_provider}. Only 'azure' and 'github-models' are supported.")
-        except ImportError:
-            print("Error: openai package not found. Please install with: pip install openai")
+            return self.provider.init_client(self.config)
+        except ImportError as e:
+            print(f"Error: required package not found for provider '{self.config.ai_provider}': {e}")
             sys.exit(1)
     
     def _validate_path(self, path: str, base_dir: str = os.getcwd()) -> str:
@@ -634,22 +703,18 @@ class TerraformAnalyser:
         """Validate all configuration inputs to prevent injection attacks"""
         
         # Validate AI provider
-        allowed_providers = ['azure', 'github-models']
-        if self.config.ai_provider not in allowed_providers:
+        if self.config.ai_provider not in PROVIDERS:
             raise ValueError(
                 f"Invalid AI provider '{self.config.ai_provider}'. "
-                f"Must be one of: {', '.join(allowed_providers)}"
+                f"Must be one of: {', '.join(PROVIDERS.keys())}"
             )
-        
-        # Validate required credentials based on provider
-        if self.config.ai_provider == 'github-models':
-            if not self.config.github_models_token:
-                raise ValueError("GitHub Models token is required when using 'github-models' provider")
-        elif self.config.ai_provider == 'azure':
-            if not self.config.azure_openai_api_key:
-                raise ValueError("Azure OpenAI API key is required when using 'azure' provider")
-            if not self.config.azure_openai_endpoint:
-                raise ValueError("Azure OpenAI endpoint is required when using 'azure' provider")
+
+        # Validate required credentials - all providers currently run on the
+        # same Microsoft Foundry resource (endpoint + key)
+        if not self.config.azure_openai_api_key:
+            raise ValueError(f"Azure OpenAI API key is required when using '{self.config.ai_provider}' provider")
+        if not self.config.azure_openai_endpoint:
+            raise ValueError(f"Azure OpenAI endpoint is required when using '{self.config.ai_provider}' provider")
         
         # Validate paths (prevent path traversal)
         workspace_dir = os.getcwd()
@@ -1180,21 +1245,17 @@ Provide detailed, actionable analysis focusing on security, best practices, and 
 Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 Warning, 🔵 Recommendation, ✅ Good Practice"""
     
     def analyse_with_ai(self, prompt: str) -> str:
-        """Analyse the Terraform plan using Azure OpenAI or GitHub Models with retry logic"""
+        """Analyse the Terraform plan using the configured AI provider with retry logic"""
         # Scrub sensitive data from prompt before sending to AI
         scrubbed_prompt = self._scrub_sensitive_data(prompt)
-        
+
         # Validate prompt size to avoid token limits
         prompt_length = len(scrubbed_prompt)
         if prompt_length > 100000:  # Rough estimate for token limits
             print(f"Warning: Large prompt detected ({prompt_length} chars). Consider using plan-only mode for better performance.")
-        
-        # Determine model name based on provider
-        if self.config.ai_provider == 'github-models':
-            model_name = self.config.github_models_model
-        else:  # azure
-            model_name = self.config.azure_openai_deployment
-        
+
+        model_name = self.provider.model_name(self.config)
+
         # Adjust parameters based on analysis depth (if configured)
         analysis_depth = getattr(self.config, 'analysis_depth', 'standard')
         if analysis_depth == 'quick':
@@ -1206,63 +1267,28 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         else:  # standard
             max_tokens = 8000
             temperature = 0.1
-        
-        # Determine if we should use max_completion_tokens (GPT-5) or max_tokens (older models)
-        # GPT-5 uses max_completion_tokens instead of max_tokens
-        use_max_completion_tokens = False
-        if self.config.ai_provider == 'github-models':
-            github_model = getattr(self.config, 'github_models_model', 'gpt-4o')
-            # Check if it's GPT-5
-            if 'gpt-5' in github_model.lower():
-                use_max_completion_tokens = True
-        elif self.config.ai_provider == 'azure':
-            # Check Azure deployment name
-            deployment = getattr(self.config, 'azure_openai_deployment', 'gpt-4')
-            if 'gpt-5' in deployment.lower():
-                use_max_completion_tokens = True
-        
+
         # Choose system message based on analysis style
         analysis_style = getattr(self.config, 'analysis_style', 'severity')
-        
+
         # Load system prompt from file
         system_content = self.load_system_prompt(analysis_style)
-        
+
         # Retry configuration
         max_retries = int(os.environ.get('API_MAX_RETRIES', '3'))
         timeout_seconds = int(os.environ.get('API_TIMEOUT_SECONDS', '120'))
-        
+
         last_error = None
-        
+
         for attempt in range(max_retries):
             try:
                 print(f"Calling AI API (attempt {attempt + 1}/{max_retries})...")
-                
-                # Build API parameters based on model version
-                api_params = {
-                    "model": model_name,
-                    "messages": [
-                        {
-                            "role": "system", 
-                            "content": system_content
-                        },
-                        {"role": "user", "content": scrubbed_prompt}
-                    ],
-                    "temperature": temperature,
-                    "presence_penalty": 0.1,  # Reduce repetition
-                    "frequency_penalty": 0.1,  # Encourage diverse language
-                    "timeout": timeout_seconds
-                }
-                
-                # Add the appropriate token parameter
-                if use_max_completion_tokens:
-                    api_params["max_completion_tokens"] = max_tokens
-                else:
-                    api_params["max_tokens"] = max_tokens
-                
-                response = self.openai_client.chat.completions.create(**api_params)
-                
-                return response.choices[0].message.content
-                
+
+                return self.provider.complete(
+                    self.ai_client, model_name, system_content, scrubbed_prompt,
+                    temperature, max_tokens, timeout_seconds
+                )
+
             except Exception as e:
                 last_error = e
                 error_type = type(e).__name__
@@ -1307,8 +1333,6 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         # Remove API keys (various formats)
         if self.config.azure_openai_api_key:
             sanitized = sanitized.replace(self.config.azure_openai_api_key, '***REDACTED***')
-        if self.config.github_models_token:
-            sanitized = sanitized.replace(self.config.github_models_token, '***REDACTED***')
         
         # Remove endpoints/URLs (may contain sensitive paths)
         if self.config.azure_openai_endpoint:
@@ -1509,21 +1533,17 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
 def load_config_from_env() -> AnalysisConfig:
     """Load configuration from environment variables"""
     ai_provider = os.environ.get("AI_PROVIDER", "azure").lower()
-    
+
     # Validate AI provider and required credentials
-    if ai_provider == "github-models":
-        if not os.environ.get("GITHUB_MODELS_TOKEN"):
-            print("ERROR: GITHUB_MODELS_TOKEN environment variable is required for GitHub Models", file=sys.stderr)
-            sys.exit(1)
-    elif ai_provider == "azure":
-        if not os.environ.get("AZURE_OPENAI_API_KEY"):
-            print("ERROR: AZURE_OPENAI_API_KEY environment variable is required for Azure OpenAI", file=sys.stderr)
-            sys.exit(1)
-        if not os.environ.get("AZURE_OPENAI_ENDPOINT"):
-            print("ERROR: AZURE_OPENAI_ENDPOINT environment variable is required for Azure OpenAI", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(f"ERROR: Unsupported AI provider '{ai_provider}'. Only 'azure' and 'github-models' are supported.", file=sys.stderr)
+    if ai_provider not in PROVIDERS:
+        print(f"ERROR: Unsupported AI provider '{ai_provider}'. Must be one of: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+        sys.exit(1)
+
+    if not os.environ.get("AZURE_OPENAI_API_KEY"):
+        print("ERROR: AZURE_OPENAI_API_KEY environment variable is required", file=sys.stderr)
+        sys.exit(1)
+    if not os.environ.get("AZURE_OPENAI_ENDPOINT"):
+        print("ERROR: AZURE_OPENAI_ENDPOINT environment variable is required", file=sys.stderr)
         sys.exit(1)
     
     # Check if terraform plan exists
@@ -1543,10 +1563,7 @@ def load_config_from_env() -> AnalysisConfig:
         ai_provider=ai_provider,
         azure_openai_api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
         azure_openai_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-        azure_openai_api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01"),
-        azure_openai_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4"),
-        github_models_token=os.environ.get("GITHUB_MODELS_TOKEN"),
-        github_models_model=os.environ.get("GITHUB_MODELS_MODEL", "gpt-4o"),
+        azure_openai_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5-mini"),
         terraform_plan_path=terraform_plan_path,
         terraform_directory=os.environ.get("TERRAFORM_DIRECTORY", "."),
         analysis_focus=analysis_focus.split(","),

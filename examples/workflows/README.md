@@ -4,14 +4,9 @@ This directory contains example workflows demonstrating different use cases for 
 
 ## Available Examples
 
-### Azure OpenAI Examples
-1. **[basic-usage.yml](basic-usage.yml)** - Simple single-job workflow with Azure OpenAI
+1. **[basic-usage.yml](basic-usage.yml)** - Simple single-job workflow
 2. **[multi-environment.yml](multi-environment.yml)** - Review multiple environments (dev/prod)
 3. **[security-focused.yml](security-focused.yml)** - Security audit with automated issue creation
-
-### GitHub Models Examples
-4. **[github-models.yml](github-models.yml)** - Basic workflow using GitHub Models
-5. **[github-models-multi-env.yml](github-models-multi-env.yml)** - Multi-environment review with GitHub Models
 
 ## How to Use
 
@@ -19,13 +14,13 @@ Copy any example to your `.github/workflows/` directory and customize as needed.
 
 ### Required Secrets
 
-For Azure OpenAI (recommended):
-- `AZURE_OPENAI_API_KEY` - Your Azure OpenAI API key
-- `AZURE_OPENAI_ENDPOINT` - Your Azure OpenAI endpoint URL
-- `AZURE_OPENAI_DEPLOYMENT` - Your Azure OpenAI deployment name
+The action runs on [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/), using either OpenAI-compatible models (e.g. GPT-5) or Claude models on the same Foundry resource:
 
-For GitHub Models (alternative):
-- `GH_MODELS_TOKEN` - GitHub token with models access (can use `secrets.GITHUB_TOKEN`)
+- `AZURE_OPENAI_API_KEY` - Your Microsoft Foundry / Azure OpenAI API key
+- `AZURE_OPENAI_ENDPOINT` - Your Foundry resource endpoint URL
+- `AZURE_OPENAI_DEPLOYMENT` - Your model deployment name
+
+Set `ai-provider: 'azure'` for OpenAI-compatible deployments (GPT-5 family), or `ai-provider: 'azure-anthropic'` for a Claude deployment on the same resource - see the [README](../../README.md#ai-provider) for details.
 
 ### Required Permissions
 
@@ -34,5 +29,4 @@ All workflows need these permissions:
 permissions:
   contents: read
   pull-requests: write
-  models: read  # Required for GitHub Models
 ```

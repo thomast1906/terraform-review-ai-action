@@ -4,13 +4,12 @@
 
 ### What is Terraform AI Review Action?
 
-This is a GitHub Action that uses AI (Azure OpenAI or GitHub Models) to analyse Terraform infrastructure plans and provide intelligent recommendations on security, cost optimisation, best practices, and more.
+This is a GitHub Action that uses AI, via [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/) (GPT-5 family or Claude models), to analyse Terraform infrastructure plans and provide intelligent recommendations on security, cost optimisation, best practices, and more.
 
 ### How much does it cost to use?
 
 The action itself is free and open-source. You only pay for:
-- **Azure OpenAI**: Based on tokens processed (typically $0.01-0.10 per plan review)
-- **GitHub Models**: [Free tier available](https://docs.github.com/en/github-models), paid tiers for higher usage
+- **Microsoft Foundry**: Based on tokens processed (typically $0.01-0.10 per plan review for GPT-5 family models; Claude models bill in Claude Consumption Units via Azure Marketplace)
 - **GitHub Actions minutes**: Usually within free tier limits
 
 ### Which Terraform providers are supported?
@@ -26,24 +25,18 @@ All Terraform providers are supported! The action automatically detects and adap
 
 ### How do I get started?
 
-1. Set up Azure OpenAI or GitHub Models access
-2. Add API credentials to GitHub Secrets  
+1. Set up a [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/) resource and deploy a model (GPT-5 family, or Claude)
+2. Add API credentials to GitHub Secrets
 3. Add the action to your workflow (see [README.md](README.md))
-4. **For GitHub Models**: Add `models: read` permission to your workflow
-5. Configure analysis focus areas and depth
+4. Configure analysis focus areas and depth
 
 ### What secrets do I need to configure?
 
-For Azure OpenAI:
+For Microsoft Foundry (used by both `azure` and `azure-anthropic` providers):
 ```
 AZURE_OPENAI_API_KEY
 AZURE_OPENAI_ENDPOINT
 AZURE_OPENAI_DEPLOYMENT
-```
-
-For GitHub Models:
-```
-GITHUB_TOKEN  # Built-in token or personal access token
 ```
 
 Plus GitHub token for PR comments (automatically provided):
@@ -51,14 +44,12 @@ Plus GitHub token for PR comments (automatically provided):
 GITHUB_TOKEN
 ```
 
-**Note:** GitHub Models is the easiest to set up - it uses your existing GitHub token with no additional credentials needed!
-
 ### Can I use this with self-hosted runners?
 
 Yes! Make sure your self-hosted runner has:
-- Python 3.11+
+- Python 3.13+
 - Docker (if using MCP validation)
-- Network access to OpenAI API endpoints
+- Network access to your Foundry resource endpoint
 
 ## Analysis Features
 
@@ -100,22 +91,11 @@ Make sure you:
 
 ### I get AI API errors
 
-**For Azure OpenAI:**
 - API key is valid and not expired
-- Endpoint URL is correct (include https://)
-- Deployment name matches your Azure OpenAI deployment
+- Endpoint URL is correct (include `https://`, e.g. `https://<resource>.openai.azure.com`)
+- Deployment name matches an actual deployment on your Foundry resource for the selected `ai-provider` (a GPT-5 deployment for `azure`, a Claude deployment for `azure-anthropic`)
 - You have sufficient quota/credits
-
-**For GitHub Models (401 Unauthorized error):**
-- Add `models: read` permission to your workflow:
-```yaml
-permissions:
-  contents: read
-  pull-requests: write
-  models: read  # Required for GitHub Models
-```
-- Ensure your repository has access to GitHub Models
-- [Learn more about GitHub Models setup](https://thomasthornton.cloud/2025/08/19/using-github-models-with-your-github-workflows/)
+- For `azure-anthropic`: confirm your Azure subscription has an active Azure Marketplace subscription for the Claude model (billed in Claude Consumption Units)
 
 ### MCP server fails to start
 
@@ -139,19 +119,13 @@ Check:
 
 ## Security & Privacy
 
-### Is my Terraform code sent to OpenAI?
+### Is my Terraform code sent to a third party?
 
-Yes, the action sends your Terraform data to the configured AI provider:
-- **GitHub Models**: Data sent to GitHub's AI infrastructure
-- **Azure OpenAI**: Data sent to your Azure OpenAI instance
+Yes, the action sends your Terraform data to your configured Microsoft Foundry resource - it stays within your own Azure tenant (with your configured data residency) either way, whether you're using an OpenAI-compatible deployment (`azure`) or a Claude deployment (`azure-anthropic`).
 
 What is sent:
 - Terraform plan JSON (always)
 - Terraform source files (in comprehensive mode only)
-
-**Privacy considerations:**
-- GitHub Models: Review [GitHub's data handling policies](https://docs.github.com/en/github-models)
-- Azure OpenAI: Data stays in your Azure tenant with your configured data residency
 
 ### How is sensitive data handled?
 
@@ -170,10 +144,8 @@ Use `analysis-mode: plan-only` to avoid sending source files, or:
 ### Can I use this in air-gapped environments?
 
 Partially - you'd need:
-- Access to Azure OpenAI API (Azure OpenAI can be deployed in your environment)
-- GitHub Models won't work in air-gapped environments
-- Skip MCP validation: `skip-mcp-validation: true`
-- Network access from your runners to the AI provider endpoint
+- Network access from your runners to your Microsoft Foundry resource endpoint
+- Skip MCP validation: `skip-mcp-validation: true` (the HashiCorp MCP server needs internet/registry access)
 
 ## Performance
 
@@ -210,8 +182,10 @@ strategy:
 steps:
   - uses: thomast1906/terraform-review-ai-action@v1
     with:
-      ai-provider: 'github-models'
-      github-models-token: ${{ secrets.GITHUB_TOKEN }}
+      ai-provider: 'azure'
+      azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
       github-token: ${{ secrets.GITHUB_TOKEN }}
       terraform-directory: ${{ matrix.directory }}
       terraform-plan-path: ${{ matrix.directory }}/tfplan.json
@@ -225,8 +199,10 @@ Check the outputs:
 - id: review
   uses: thomast1906/terraform-review-ai-action@v1
   with:
-    ai-provider: 'github-models'
-    github-models-token: ${{ secrets.GITHUB_TOKEN }}
+    ai-provider: 'azure'
+    azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
 
 - name: Check for critical issues
@@ -247,24 +223,25 @@ For advanced customization, you can fork the repository and modify the prompts i
 
 ### Can I use a different AI model?
 
-Yes! Specify the model based on your AI provider:
+Yes! Set `azure-openai-deployment` to whatever you've named your deployment on your Foundry resource:
 
-**For Azure OpenAI:**
+**For GPT-5 family models:**
 ```yaml
 with:
   ai-provider: 'azure'
   azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
   azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-  azure-openai-deployment: 'your-gpt-4-deployment'  # Name of your Azure deployment
+  azure-openai-deployment: 'your-gpt-5-deployment'  # Name of your Foundry deployment
   github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-**For GitHub Models:**
+**For Claude models:**
 ```yaml
 with:
-  ai-provider: 'github-models'
-  github-models-token: ${{ secrets.GITHUB_TOKEN }}
-  github-models-model: 'gpt-4o'  # or 'gpt-4o-mini' for faster/cheaper analysis
+  ai-provider: 'azure-anthropic'
+  azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+  azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+  azure-openai-deployment: 'claude-sonnet-5'  # Name of your Claude deployment
   github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 

@@ -12,7 +12,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read
 
 jobs:
   azure-review:
@@ -23,7 +22,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run Azure AI Review
       uses: ./
@@ -31,7 +30,6 @@ jobs:
         ai-provider: 'azure'
         azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
         azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-        azure-openai-api-version: '2024-02-01'
         azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_azure_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -40,7 +38,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload Azure Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: azure-analysis-${{ github.run_id }}
@@ -55,7 +53,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Run AWS AI Review
       uses: ./
@@ -63,7 +61,6 @@ jobs:
         ai-provider: 'azure'
         azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
         azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-        azure-openai-api-version: '2024-02-01'
         azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_aws_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +68,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload AWS Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: aws-analysis-${{ github.run_id }}
@@ -86,14 +83,15 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Run GCP AI Review
       uses: ./
       with:
-        ai-provider: 'github-models'
-        github-models-model: 'gpt-5'
-        github-models-token: ${{ secrets.GITHUB_TOKEN }}
+        ai-provider: 'azure'
+        azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
         terraform-plan-path: 'examples/terraform-plan-json/large_gcp_plan.json'
         disable-pr-comment: 'true'
@@ -102,7 +100,7 @@ jobs:
         analysis-style: 'domain'
 
     - name: Upload GCP Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: gcp-analysis-${{ github.run_id }}
@@ -117,7 +115,7 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Run Other Providers AI Review
       uses: ./
@@ -125,7 +123,6 @@ jobs:
         ai-provider: 'azure'
         azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
         azure-openai-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-        azure-openai-api-version: '2024-02-01'
         azure-openai-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
         terraform-plan-path: 'examples/terraform-plan-json/large_other_plan.json'
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -134,7 +131,7 @@ jobs:
         show-mcp-details: 'true'
 
     - name: Upload Other Providers Analysis
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: other-analysis-${{ github.run_id }}
@@ -149,12 +146,12 @@ jobs:
     
     steps:
     - name: Download All Analyses
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: analyses
 
     - name: Create Combined PR Comment
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |

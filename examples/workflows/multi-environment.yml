@@ -8,13 +8,12 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  models: read  # Required for GitHub Models
 
 jobs:
   review-dev:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - uses: hashicorp/setup-terraform@v3
       
@@ -42,7 +41,7 @@ jobs:
   review-prod:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - uses: hashicorp/setup-terraform@v3
       
