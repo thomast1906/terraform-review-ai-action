@@ -58,7 +58,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-review-ai-action@v1
+        uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -74,7 +74,7 @@ jobs:
 Both providers run on the same Foundry resource (same endpoint and API key) - just switch `ai-provider` and point `azure-openai-deployment` at your Claude deployment:
 
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure-anthropic'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -96,7 +96,7 @@ Both providers run on the same Foundry resource (same endpoint and API key) - ju
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `azure-openai-api-key` | Foundry / Azure OpenAI API key | ✅ | - |
-| `azure-openai-endpoint` | Foundry resource endpoint URL (e.g. `https://<resource>.openai.azure.com`) | ✅ | - |
+| `azure-openai-endpoint` | Foundry resource endpoint URL (e.g. `https://<resource>.services.ai.azure.com`) - must be an Azure AI Foundry resource, not a classic Azure OpenAI-only resource, since `azure-anthropic` requires the Foundry `/anthropic` path | ✅ | - |
 | `azure-openai-deployment` | Model deployment name on your Foundry resource | ❌ | `gpt-5-mini` |
 
 Both providers use the same three inputs above - they share one Foundry resource, differentiated only by `ai-provider` and which deployment name you point at.
@@ -284,7 +284,7 @@ analysis-style: 'severity'
 ### Production Deployment
 
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -299,7 +299,7 @@ analysis-style: 'severity'
 ### Quick CI/CD Check
 
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -331,7 +331,7 @@ jobs:
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
       
-      - uses: thomast1906/terraform-review-ai-action@v1
+      - uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -373,9 +373,10 @@ mcp-server-timeout: 60
 ### Microsoft Foundry (both `azure` and `azure-anthropic`)
 ```bash
 AZURE_OPENAI_API_KEY=<your-key>
-AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
+AZURE_OPENAI_ENDPOINT=https://<resource>.services.ai.azure.com
 AZURE_OPENAI_DEPLOYMENT=<deployment-name>
 ```
+Use your Azure AI Foundry resource endpoint (`.services.ai.azure.com`), not a classic Azure OpenAI-only resource (`.openai.azure.com`) - Claude deployments (`azure-anthropic`) are only reachable through the Foundry endpoint.
 
 `GITHUB_TOKEN` for PR comments is provided automatically by GitHub Actions - no secret to configure.
 

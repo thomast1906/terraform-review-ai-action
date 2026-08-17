@@ -29,6 +29,7 @@ class AnalysisConfig:
     analysis_focus: List[str] = None
     analysis_mode: str = "comprehensive"  # "plan-only" or "comprehensive"
     analysis_style: str = "severity"  # "severity" or "domain"
+    analysis_depth: str = "standard"  # "quick", "standard", or "detailed"
     mcp_available: bool = False
     skip_mcp: bool = False
     show_mcp_details: bool = False  # Show detailed MCP analysis section for troubleshooting
@@ -138,7 +139,7 @@ class TerraformMCPClient:
             # The HashiCorp MCP server runs on stdio by default (no 'stdio' command needed)
             cmd = [
                 'docker', 'run', '--rm', '-i',
-                'hashicorp/terraform-mcp-server:latest'
+                'hashicorp/terraform-mcp-server:1.2.0'
             ]
             
             self.process = await asyncio.create_subprocess_exec(
@@ -596,8 +597,10 @@ class AzureOpenAIProvider(AIProvider):
         return OpenAI(api_key=config.azure_openai_api_key, base_url=base_url)
 
     def complete(self, client, model, system_content, user_content, temperature, max_tokens, timeout_seconds):
-        # GPT-5 family models use max_completion_tokens instead of max_tokens
-        use_max_completion_tokens = 'gpt-5' in model.lower()
+        # GPT-5 family models are reasoning models: they use max_completion_tokens
+        # instead of max_tokens, and reject temperature/presence_penalty/frequency_penalty
+        # overrides (only the default value of each is accepted).
+        is_gpt5 = 'gpt-5' in model.lower()
 
         api_params = {
             "model": model,
@@ -605,14 +608,14 @@ class AzureOpenAIProvider(AIProvider):
                 {"role": "system", "content": system_content},
                 {"role": "user", "content": user_content}
             ],
-            "temperature": temperature,
-            "presence_penalty": 0.1,  # Reduce repetition
-            "frequency_penalty": 0.1,  # Encourage diverse language
             "timeout": timeout_seconds
         }
-        if use_max_completion_tokens:
+        if is_gpt5:
             api_params["max_completion_tokens"] = max_tokens
         else:
+            api_params["temperature"] = temperature
+            api_params["presence_penalty"] = 0.1  # Reduce repetition
+            api_params["frequency_penalty"] = 0.1  # Encourage diverse language
             api_params["max_tokens"] = max_tokens
 
         response = client.chat.completions.create(**api_params)
@@ -1145,7 +1148,7 @@ class TerraformAnalyser:
             mcp_context += "- When suggesting modules or configurations, reference the provided registry URLs\n\n"
         
         # Determine analysis depth instructions
-        analysis_depth = getattr(self.config, 'analysis_depth', 'standard')
+        analysis_depth = self.config.analysis_depth
         depth_instruction = ""
         if analysis_depth == 'quick':
             depth_instruction = "Provide a focused analysis highlighting the most critical issues and essential recommendations. Be concise but thorough on high-impact items."
@@ -1172,6 +1175,9 @@ You are a senior DevOps and cloud infrastructure expert with extensive experienc
 3. **Optimisation Review**: Find cost savings, performance improvements, best practices
 4. **Compliance Check**: Verify adherence to standards and policies
 5. **Operational Readiness**: Evaluate monitoring, logging, backup, disaster recovery
+
+## ANALYSIS DEPTH
+{depth_instruction}
 
 ## INFRASTRUCTURE DATA
 
@@ -1256,8 +1262,8 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
 
         model_name = self.provider.model_name(self.config)
 
-        # Adjust parameters based on analysis depth (if configured)
-        analysis_depth = getattr(self.config, 'analysis_depth', 'standard')
+        # Adjust parameters based on analysis depth
+        analysis_depth = self.config.analysis_depth
         if analysis_depth == 'quick':
             max_tokens = 4000
             temperature = 0.2
@@ -1569,6 +1575,7 @@ def load_config_from_env() -> AnalysisConfig:
         analysis_focus=analysis_focus.split(","),
         analysis_mode=os.environ.get("ANALYSIS_MODE", "comprehensive"),
         analysis_style=os.environ.get("ANALYSIS_STYLE", "severity"),
+        analysis_depth=os.environ.get("ANALYSIS_DEPTH", "standard"),
         mcp_available=os.environ.get("MCP_AVAILABLE", "false").lower() == "true",
         skip_mcp=os.environ.get("SKIP_MCP", "false").lower() == "true",
         show_mcp_details=os.environ.get("SHOW_MCP_DETAILS", "false").lower() == "true"

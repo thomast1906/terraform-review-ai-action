@@ -18,11 +18,11 @@ Add your Foundry credentials to GitHub Secrets:
 
 ```
 AZURE_OPENAI_API_KEY=your-api-key-here
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_ENDPOINT=https://your-resource.services.ai.azure.com
 AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 ```
 
-The same three secrets work for both provider options below - only `ai-provider` and the deployment name change.
+The same three secrets work for both provider options below - only `ai-provider` and the deployment name change. Use your Azure AI Foundry resource endpoint (`.services.ai.azure.com`) - a classic Azure OpenAI-only resource (`.openai.azure.com`) won't serve the Claude (`azure-anthropic`) deployment.
 
 ## Step 2: Create Workflow File
 
@@ -58,7 +58,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-review-ai-action@v1
+        uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -99,7 +99,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: AI Review
-        uses: thomast1906/terraform-review-ai-action@v1
+        uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure-anthropic'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -119,7 +119,7 @@ jobs:
 
 ### Quick Security Check (Fast)
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -133,7 +133,7 @@ jobs:
 
 ### Production Deployment Review (Thorough)
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -146,7 +146,7 @@ jobs:
 
 ### Cost Optimisation Focus
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -158,7 +158,7 @@ jobs:
 
 ### Security Audit with Claude
 ```yaml
-- uses: thomast1906/terraform-review-ai-action@v1
+- uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure-anthropic'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -191,7 +191,7 @@ jobs:
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
       
-      - uses: thomast1906/terraform-review-ai-action@v1
+      - uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}

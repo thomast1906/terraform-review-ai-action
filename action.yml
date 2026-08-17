@@ -135,6 +135,8 @@ runs:
       if: inputs.skip-mcp-validation != 'true'
       shell: bash
       id: mcp-server
+      env:
+        MCP_SERVER_TIMEOUT: ${{ inputs.mcp-server-timeout }}
       run: |
         echo "Starting HashiCorp Terraform MCP Server..."
         
@@ -155,7 +157,7 @@ runs:
 
         # Test JSON-RPC stdio mode
         echo "Testing MCP server JSON-RPC stdio mode..."
-        if echo '{"jsonrpc": "2.0", "id": "test", "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "1.0.0"}}}' | timeout 15 docker run --rm -i hashicorp/terraform-mcp-server:1.2.0 2>/dev/null | grep -q '"result"'; then
+        if echo '{"jsonrpc": "2.0", "id": "test", "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "test", "version": "1.0.0"}}}' | timeout "${MCP_SERVER_TIMEOUT:-60}" docker run --rm -i hashicorp/terraform-mcp-server:1.2.0 2>/dev/null | grep -q '"result"'; then
           echo "MCP server JSON-RPC stdio mode is working"
           echo "mcp_available=true" >> $GITHUB_OUTPUT
         else
@@ -177,6 +179,7 @@ runs:
         ANALYSIS_FOCUS: ${{ inputs.analysis-focus }}
         ANALYSIS_MODE: ${{ inputs.analysis-mode }}
         ANALYSIS_STYLE: ${{ inputs.analysis-style }}
+        ANALYSIS_DEPTH: ${{ inputs.analysis-depth }}
         MCP_AVAILABLE: ${{ steps.mcp-server.outputs.mcp_available || 'false' }}
         SKIP_MCP: ${{ inputs.skip-mcp-validation }}
         SHOW_MCP_DETAILS: ${{ inputs.show-mcp-details }}

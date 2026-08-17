@@ -29,7 +29,7 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
       
       - name: Security Audit
-        uses: thomast1906/terraform-review-ai-action@v1
+        uses: thomast1906/terraform-review-ai-action@v2
         with:
           ai-provider: 'azure'
           azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}

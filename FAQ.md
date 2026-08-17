@@ -92,7 +92,7 @@ Make sure you:
 ### I get AI API errors
 
 - API key is valid and not expired
-- Endpoint URL is correct (include `https://`, e.g. `https://<resource>.openai.azure.com`)
+- Endpoint URL is correct (include `https://`, e.g. `https://<resource>.services.ai.azure.com`) - for `azure-anthropic` this must be your Azure AI Foundry resource endpoint, not a classic Azure OpenAI-only resource (`.openai.azure.com`), which doesn't serve Claude deployments
 - Deployment name matches an actual deployment on your Foundry resource for the selected `ai-provider` (a GPT-5 deployment for `azure`, a Claude deployment for `azure-anthropic`)
 - You have sufficient quota/credits
 - For `azure-anthropic`: confirm your Azure subscription has an active Azure Marketplace subscription for the Claude model (billed in Claude Consumption Units)
@@ -180,7 +180,7 @@ strategy:
   matrix:
     directory: [terraform/dev, terraform/prod]
 steps:
-  - uses: thomast1906/terraform-review-ai-action@v1
+  - uses: thomast1906/terraform-review-ai-action@v2
     with:
       ai-provider: 'azure'
       azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -197,7 +197,7 @@ Check the outputs:
 
 ```yaml
 - id: review
-  uses: thomast1906/terraform-review-ai-action@v1
+  uses: thomast1906/terraform-review-ai-action@v2
   with:
     ai-provider: 'azure'
     azure-openai-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}

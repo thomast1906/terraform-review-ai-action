@@ -6,7 +6,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^action\\.yml$/"],
+      "managerFilePatterns": ["/^action\\.yml$/", "/^analyse_terraform\\.py$/"],
       "matchStrings": [
         "hashicorp/terraform-mcp-server:(?<currentValue>[\\w.-]+)"
       ],
