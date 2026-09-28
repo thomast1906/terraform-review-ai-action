@@ -6,17 +6,17 @@ Replace `<commit-sha>` in these examples with a revision you have reviewed.
 
 === "Comment overview"
 
-    ![Action-generated multi-cloud review comment from PR 98](assets/pr98-review-overview.png)
+    ![Action-generated multi-cloud review comment from PR 80](assets/pr80-review-overview.png)
 
 === "Azure critical finding"
 
-    ![Azure critical finding rendered by GitHub on PR 98](assets/pr98-azure-critical.png)
+    ![Azure critical finding rendered by GitHub on PR 80](assets/pr80-azure-critical.png)
 
 === "Multi-provider critical finding"
 
-    ![Multi-provider critical finding rendered by GitHub on PR 98](assets/pr98-other-providers-critical.png)
+    ![Multi-provider critical finding rendered by GitHub on PR 80](assets/pr80-other-providers-critical.png)
 
-Examples from [PR #98](https://github.com/thomast1906/terraform-ai-review-action-privaterepo/pull/98).
+Examples from [PR #80](https://github.com/thomast1906/terraform-review-ai-action/pull/80).
 
 ## Basic pull-request review
 
@@ -124,4 +124,4 @@ steps:
 !!! note
     Disable individual comments in matrix jobs to avoid several jobs updating the same managed comment. Consume the outputs or upload each report as an artifact instead.
 
-Complete workflow files are also available in the repository's [`examples/workflows`](https://github.com/thomast1906/terraform-ai-review-action-privaterepo/tree/main/examples/workflows) directory.
+Complete workflow files are also available in the repository's [`examples/workflows`](https://github.com/thomast1906/terraform-review-ai-action/tree/main/examples/workflows) directory.

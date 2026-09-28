@@ -1,8 +1,8 @@
 site_name: Terraform AI Plan Review
 site_description: Foundry-powered Terraform plan reviews for GitHub pull requests
-site_url: https://thomast1906.github.io/terraform-ai-review-action-privaterepo/
-repo_url: https://github.com/thomast1906/terraform-ai-review-action-privaterepo
-repo_name: thomast1906/terraform-ai-review-action-privaterepo
+site_url: https://thomast1906.github.io/terraform-review-ai-action/
+repo_url: https://github.com/thomast1906/terraform-review-ai-action
+repo_name: thomast1906/terraform-review-ai-action
 edit_uri: edit/main/docs/
 nav:
   - Home: index.md
@@ -82,7 +82,7 @@ extra_css:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/thomast1906/terraform-ai-review-action-privaterepo
+      link: https://github.com/thomast1906/terraform-review-ai-action
       name: Terraform AI Plan Review on GitHub
 
 copyright: Copyright &copy; 2026 Thomas Thornton
