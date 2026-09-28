@@ -1,7 +1,7 @@
 # Terraform AI Plan Review Action
 
-[![Documentation](https://github.com/thomast1906/terraform-ai-review-action-privaterepo/actions/workflows/docs.yml/badge.svg)](https://github.com/thomast1906/terraform-ai-review-action-privaterepo/actions/workflows/docs.yml)
-[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-0078D4?logo=github)](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/)
+[![Documentation](https://github.com/thomast1906/terraform-review-ai-action/actions/workflows/docs.yml/badge.svg)](https://github.com/thomast1906/terraform-review-ai-action/actions/workflows/docs.yml)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-0078D4?logo=github)](https://thomast1906.github.io/terraform-review-ai-action/)
 
 Turn Terraform plans into actionable pull-request feedback. The action sends bounded plan evidence to Microsoft Foundry and returns findings for security, cost, reliability, and delivery risk—linked to resource addresses and changed values.
 
@@ -26,7 +26,7 @@ Generate a Terraform JSON plan, then invoke the action:
     github-token: ${{ github.token }}
 ```
 
-Replace `<commit-sha>` with a revision you have reviewed. See the [getting-started guide](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/getting-started/) for workflow setup and security guidance.
+Replace `<commit-sha>` with a revision you have reviewed. See the [getting-started guide](https://thomast1906.github.io/terraform-review-ai-action/getting-started/) for workflow setup and security guidance.
 
 ## Built for Terraform pull requests
 
@@ -39,11 +39,11 @@ Replace `<commit-sha>` with a revision you have reviewed. See the [getting-start
 
 The guide covers setup, configuration, safety, and examples:
 
-**[Read the documentation website](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/)**
+**[Read the documentation website](https://thomast1906.github.io/terraform-review-ai-action/)**
 
-- [Get started](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/getting-started/)
-- [Configuration reference](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/configuration/)
-- [Review modes and presets](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/review-options/)
-- [Workflow examples](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/examples/)
-- [Security and privacy](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/security/)
-- [Troubleshooting](https://thomast1906.github.io/terraform-ai-review-action-privaterepo/troubleshooting/)
+- [Get started](https://thomast1906.github.io/terraform-review-ai-action/getting-started/)
+- [Configuration reference](https://thomast1906.github.io/terraform-review-ai-action/configuration/)
+- [Review modes and presets](https://thomast1906.github.io/terraform-review-ai-action/review-options/)
+- [Workflow examples](https://thomast1906.github.io/terraform-review-ai-action/examples/)
+- [Security and privacy](https://thomast1906.github.io/terraform-review-ai-action/security/)
+- [Troubleshooting](https://thomast1906.github.io/terraform-review-ai-action/troubleshooting/)
