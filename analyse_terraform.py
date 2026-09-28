@@ -17,24 +17,29 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
 
+MCP_IMAGE = "hashicorp/terraform-mcp-server@sha256:423a6b8e2ee06affcf090892f40c86469caba45fd2448ffa8ca5d717a174f7d5"
+
+
 @dataclass
 class AnalysisConfig:
-    """Configuration for the analysis"""
-    ai_provider: str = "azure"  # "azure" or "github-models"
-    azure_openai_api_key: Optional[str] = None
-    azure_openai_endpoint: Optional[str] = None
-    azure_openai_api_version: str = "2024-02-01"
-    azure_openai_deployment: str = "gpt-4"
-    github_models_token: Optional[str] = None
-    github_models_model: str = "gpt-4o"
+    """Configuration for a Foundry-backed Terraform review."""
+    ai_provider: str = "foundry-openai"
+    foundry_api_key: Optional[str] = None
+    foundry_endpoint: Optional[str] = None
+    foundry_deployment: Optional[str] = None
     terraform_plan_path: str = "tfplan.json"
     terraform_directory: str = "."
-    analysis_focus: List[str] = None
-    analysis_mode: str = "comprehensive"  # "plan-only" or "comprehensive"
-    analysis_style: str = "severity"  # "severity" or "domain"
+    analysis_focus: Optional[List[str]] = None
+    analysis_preset: str = ""
+    analysis_mode: str = "plan-only"
+    analysis_depth: str = "detailed"
+    analysis_style: str = "severity"
+    fail_on_severity: str = "none"
     mcp_available: bool = False
     skip_mcp: bool = False
-    show_mcp_details: bool = False  # Show detailed MCP analysis section for troubleshooting
+    max_prompt_chars: int = 120000
+    target_prompt_chars: int = 100000
+    max_resources_per_request: int = 100
 
     def __post_init__(self):
         if self.analysis_focus is None:
@@ -141,7 +146,7 @@ class TerraformMCPClient:
             # The HashiCorp MCP server runs on stdio by default (no 'stdio' command needed)
             cmd = [
                 'docker', 'run', '--rm', '-i',
-                'hashicorp/terraform-mcp-server:latest'
+                MCP_IMAGE
             ]
             
             self.process = await asyncio.create_subprocess_exec(
@@ -281,193 +286,75 @@ class TerraformMCPClient:
         
         return insights
     
-    async def _search_modules_mcp(self, providers: List[str]) -> List[Dict]:
-        """Search modules using proper MCP protocol"""
-        module_suggestions = []
-        
-        # Map common provider names to actual registry names
-        provider_name_mapping = {
-            "azure": "azurerm",  # Our detector uses 'azure' but registry uses 'azurerm'
-            "gcp": "google",     # Our detector uses 'gcp' but registry uses 'google'
-        }
-        
-        for provider in providers[:2]:  # Limit searches
-            # Use mapped name if available, otherwise use original
-            registry_provider_name = provider_name_mapping.get(provider, provider)
-            
-            try:
-                response = await self._send_mcp_request("tools/call", {
-                    "name": "search_modules",
-                    "arguments": {
-                        "module_query": registry_provider_name,
-                        "current_offset": 0
-                    }
-                })
-                
-                if response and "result" in response:
-                    content = response["result"].get("content", [])
-                    if content and len(content) > 0:
-                        try:
-                            # Parse module results
-                            modules_text = content[0].get("text", "")
-                            if modules_text and "modules found" in modules_text:
-                                module_suggestions.append({
-                                    "provider": provider,
-                                    "modules": [{"name": f"{provider}-module-example", "description": f"Example {provider} module"}],
-                                    "total_found": 1
-                                })
-                        except Exception:
-                            pass
-                            
-            except Exception as e:
-                print(f"Warning: MCP module search failed for {provider}: {e}", file=sys.stderr)
-        
-        return module_suggestions
-    
     async def _get_resource_specific_docs(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Get detailed documentation for specific resources in the plan"""
+        """Fetch bounded, genuine documentation for resource types in the plan."""
         resource_docs = {}
-        
-        resource_changes = plan_data.get("resource_changes", [])
-        unique_resources = set()
-        
-        # Extract unique resource types from plan
-        for change in resource_changes:
-            resource_type = change.get("type", "")
-            if resource_type and resource_type not in unique_resources:
-                unique_resources.add(resource_type)
-        
-        # Get documentation for each resource type (limit to avoid timeouts)
-        for resource_type in list(unique_resources)[:5]:
+        resource_types = sorted({
+            change.get("type", "")
+            for change in plan_data.get("resource_changes", [])
+            if change.get("type")
+        })[:5]
+        for resource_type in resource_types:
             try:
-                # Extract provider and service from resource type
-                provider_name = resource_type.split("_")[0] if "_" in resource_type else resource_type
-                service_slug = resource_type.replace(f"{provider_name}_", "") if "_" in resource_type else resource_type
-                
-                # Map provider names to registry names
-                provider_mapping = {"azure": "azurerm", "gcp": "google"}
-                registry_provider = provider_mapping.get(provider_name, provider_name)
-                
-                # Search for the specific resource documentation
+                provider_name, _, service_slug = resource_type.partition("_")
+                registry_provider = {"azure": "azurerm", "gcp": "google"}.get(
+                    provider_name, provider_name
+                )
                 search_response = await self._send_mcp_request("tools/call", {
                     "name": "search_providers",
                     "arguments": {
                         "provider_name": registry_provider,
                         "provider_namespace": "hashicorp",
-                        "service_slug": service_slug,
-                        "provider_data_type": "resources"
-                    }
+                        "service_slug": service_slug or resource_type,
+                        "provider_data_type": "resources",
+                    },
                 })
-                
-                if search_response and "result" in search_response:
-                    content = search_response["result"].get("content", [])
-                    if content:
-                        # Extract provider_doc_id from the search results
-                        first_result = content[0]
-                        if isinstance(first_result, dict):
-                            text = first_result.get("text", "")
-                            
-                            # Look for provider_doc_id in the text
-                            import re
-                            doc_id_matches = re.findall(r'providerDocID:\s*(\w+)', text)
-                            
-                            if doc_id_matches:
-                                doc_id = doc_id_matches[0]  # Use first match
-                                
-                                # Get detailed documentation using the document ID
-                                doc_response = await self._send_mcp_request("tools/call", {
-                                    "name": "get_provider_details",
-                                    "arguments": {
-                                        "provider_doc_id": doc_id
-                                    }
-                                })
-                                
-                                if doc_response and "result" in doc_response:
-                                    doc_content = doc_response["result"].get("content", [])
-                                    if doc_content:
-                                        # Extract documentation URL if available
-                                        doc_text = doc_content[0].get("text", "") if doc_content else ""
-                                        url_match = re.search(r'https://registry\.terraform\.io/providers/[^\s]+', doc_text)
-                                        doc_url = url_match.group(0) if url_match else None
-                                        
-                                        resource_docs[resource_type] = {
-                                            "documentation": doc_text[:1000],  # First 1000 chars
-                                            "doc_id": doc_id,
-                                            "url": doc_url,
-                                            "status": "available"
-                                        }
-                            else:
-                                resource_docs[resource_type] = {
-                                    "search_result": text[:300],  # Store search result
-                                    "status": "found_search_only"
-                                }
-                                
-            except Exception as e:
-                print(f"Warning: Could not get docs for {resource_type}: {e}", file=sys.stderr)
-                resource_docs[resource_type] = {"status": "error", "error": str(e)}
-        
+                if not search_response or "result" not in search_response:
+                    resource_docs[resource_type] = {
+                        "status": "error", "error": f"Documentation search failed for {resource_type}"
+                    }
+                    continue
+                content = search_response["result"].get("content", [])
+                text = content[0].get("text", "") if content and isinstance(content[0], dict) else ""
+                if not text:
+                    resource_docs[resource_type] = {
+                        "status": "error", "error": f"Empty documentation response for {resource_type}"
+                    }
+                    continue
+                doc_ids = re.findall(r'providerDocID:\s*(\w+)', text)
+                if not doc_ids:
+                    resource_docs[resource_type] = {
+                        "status": "found_search_only", "search_result": text[:300]
+                    }
+                    continue
+                doc_response = await self._send_mcp_request("tools/call", {
+                    "name": "get_provider_details",
+                    "arguments": {"provider_doc_id": doc_ids[0]},
+                })
+                if not doc_response or "result" not in doc_response:
+                    resource_docs[resource_type] = {
+                        "status": "error", "error": f"Documentation detail lookup failed for {resource_type}"
+                    }
+                    continue
+                doc_content = doc_response["result"].get("content", [])
+                doc_text = doc_content[0].get("text", "") if doc_content and isinstance(doc_content[0], dict) else ""
+                if not doc_text:
+                    resource_docs[resource_type] = {
+                        "status": "error", "error": f"Empty documentation detail for {resource_type}"
+                    }
+                    continue
+                url_match = re.search(r'https://registry\.terraform\.io/providers/[^\s]+', doc_text)
+                resource_docs[resource_type] = {
+                    "documentation": doc_text[:1000],
+                    "url": url_match.group(0) if url_match else None,
+                    "status": "available",
+                }
+            except Exception as exc:
+                safe_error = str(exc) or type(exc).__name__
+                print(f"Warning: Could not get docs for {resource_type}: {safe_error}", file=sys.stderr)
+                resource_docs[resource_type] = {"status": "error", "error": safe_error}
         return resource_docs
-    
-    async def _get_version_compatibility(self, providers: List[str]) -> Dict[str, Any]:
-        """Check provider version compatibility and get latest versions"""
-        version_info = {}
-        
-        provider_mapping = {
-            "azure": "azurerm",
-            "gcp": "google"
-        }
-        
-        for provider in providers[:3]:  # Limit to avoid timeouts
-            registry_name = provider_mapping.get(provider, provider)
-            try:
-                response = await self._send_mcp_request("tools/call", {
-                    "name": "get_latest_provider_version",
-                    "arguments": {
-                        "namespace": "hashicorp",
-                        "name": registry_name
-                    }
-                })
-                
-                if response and "result" in response:
-                    content = response["result"].get("content", [])
-                    if content:
-                        # Extract version information
-                        version_text = content[0].get("text", "") if isinstance(content[0], dict) else str(content[0])
-                        
-                        # MCP server returns just the version number, try multiple patterns
-                        import re
-                        
-                        # First try to find a clean semver pattern (which is what MCP returns)
-                        version_patterns = [
-                            r'^([0-9]+\.[0-9]+\.[0-9]+)$',  # Exact match for "4.46.0" format from MCP
-                            r'([0-9]+\.[0-9]+\.[0-9]+)',    # Any semver in the text
-                            r'version[:\s]*([0-9]+\.[0-9]+\.[0-9]+)',  # "version: x.y.z" format
-                        ]
-                        
-                        latest_version = "unknown"
-                        for pattern in version_patterns:
-                            version_match = re.search(pattern, version_text.strip(), re.IGNORECASE)
-                            if version_match:
-                                latest_version = version_match.group(1)
-                                break
-                        
-                        # Extract registry URL if available
-                        url_match = re.search(r'https://registry\.terraform\.io/providers/[^\s]+', version_text)
-                        registry_url = url_match.group(0) if url_match else f"https://registry.terraform.io/providers/hashicorp/{registry_name}"
-                        
-                        version_info[provider] = {
-                            "latest_version": latest_version,
-                            "registry_url": registry_url,
-                            "status": "available",
-                            "full_response": version_text[:500]  # Store first 500 chars for context
-                        }
-                        
-            except Exception as e:
-                print(f"Warning: Version check failed for {provider}: {e}", file=sys.stderr)
-                version_info[provider] = {"status": "error", "error": str(e)}
-        
-        return version_info
-    
+
     async def _cleanup_mcp(self):
         """Cleanup MCP process"""
         if self.process:
@@ -479,80 +366,47 @@ class TerraformMCPClient:
                 await self.process.wait()
     
     def validate_plan_with_mcp(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Main entry point for MCP validation - handles async execution"""
+        """Return genuine registry documentation when available, never fail review."""
         if not self.available:
-            return {"validation_results": [], "recommendations": [], "mcp_status": "unavailable"}
-            
+            return {"status": "unavailable", "documents": [], "errors": ["Docker unavailable"]}
         try:
-            # Run async validation in a new event loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                result = loop.run_until_complete(self._validate_plan_async(plan_data))
-                return result
+                return loop.run_until_complete(self._validate_plan_async(plan_data))
             finally:
                 loop.close()
-        except Exception as e:
-            print(f"Warning: MCP validation failed: {e}", file=sys.stderr)
-            return {"validation_results": [], "recommendations": [], "mcp_status": "failed"}
-    
-    async def _validate_plan_async(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Async MCP validation with real protocol"""
-        result = {
-            "validation_results": [],
-            "recommendations": [],
-            "mcp_status": "disconnected",
-            "provider_insights": {},
-            "module_suggestions": [],
-            "resource_documentation": {},
-            "version_compatibility": {}
-        }
-        
-        try:
-            # Extract providers from plan
-            providers = self._extract_providers_from_plan(plan_data)
-            
-            # Try stdio mode first if available
-            if self.mcp_mode == 'true' and await self._initialize_mcp():
-                result["mcp_status"] = "connected"
-                
-                # Get real provider insights using stdio
-                if providers:
-                    result["provider_insights"] = await self._get_provider_insights_mcp(providers)
-                    result["module_suggestions"] = await self._search_modules_mcp(providers)
-                    result["resource_documentation"] = await self._get_resource_specific_docs(plan_data)
-                    result["version_compatibility"] = await self._get_version_compatibility(providers)
-                
-                # Create validation results from insights
-                validation_results = []
-                for provider, insights in result["provider_insights"].items():
-                    if insights.get("status") == "available":
-                        validation_results.append({
-                            "rule": f"{provider.upper()} Provider Documentation",
-                            "status": "pass",
-                            "message": f"Documentation available with {insights.get('doc_count', 0)} resources"
-                        })
-                    elif insights.get("status") == "limited":
-                        validation_results.append({
-                            "rule": f"{provider.upper()} Provider Documentation",
-                            "status": "warn",
-                            "message": "Limited documentation available"
-                        })
-                
-                result["validation_results"] = validation_results
-                
+        except Exception as exc:
+            safe_error = str(exc) or type(exc).__name__
+            print(f"Warning: MCP validation failed: {safe_error}", file=sys.stderr)
+            return {"status": "unavailable", "documents": [], "errors": [safe_error]}
 
-            else:
-                result["mcp_status"] = "unavailable"
-                
-        except Exception as e:
-            print(f"Warning: MCP async validation error: {e}", file=sys.stderr)
-            result["mcp_status"] = "error"
+    async def _validate_plan_async(self, plan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Fetch bounded resource documentation over MCP stdio."""
+        try:
+            if not await self._initialize_mcp():
+                return {"status": "unavailable", "documents": [], "errors": ["MCP initialization failed"]}
+            resource_docs = await self._get_resource_specific_docs(plan_data)
+            documents = []
+            errors = []
+            for resource_type, info in sorted(resource_docs.items()):
+                if info.get("status") in {"available", "found_search_only"}:
+                    documents.append({
+                        "resource_type": resource_type,
+                        "url": info.get("url", ""),
+                        "excerpt": str(info.get("documentation") or info.get("search_result") or "")[:500],
+                    })
+                elif info.get("status") == "error":
+                    errors.append(str(info.get("error") or f"Lookup failed for {resource_type}"))
+            status = "available" if documents or not errors else "unavailable"
+            return {"status": status, "documents": documents, "errors": errors}
+        except Exception as exc:
+            safe_error = str(exc) or type(exc).__name__
+            print(f"Warning: MCP documentation lookup failed: {safe_error}", file=sys.stderr)
+            return {"status": "unavailable", "documents": [], "errors": [safe_error]}
         finally:
             await self._cleanup_mcp()
-        
-        return result
-    
+
     def _extract_providers_from_plan(self, plan_data: Dict[str, Any]) -> List[str]:
         """Extract provider names from plan data"""
         providers = set()
@@ -567,6 +421,232 @@ class TerraformMCPClient:
         return list(providers)
 
 
+# -- Scrubbed, change-level Terraform evidence -------------------------------
+#
+# These helpers turn a raw `resource_changes[]` entry from `terraform show -json`
+# into bounded, deterministic evidence for the AI prompt: sensitive values are
+# redacted, planned-but-unknown values are masked, and only fields that actually
+# changed are surfaced. They never send raw sensitive/unknown values downstream.
+
+SENSITIVE_MASK = "<redacted-sensitive>"
+UNKNOWN_MASK = "<unknown-until-apply>"
+
+
+def _mask_marked_values(value: Any, marks: Any, replacement: str) -> Any:
+    """Recursively replace parts of `value` flagged by `marks` with `replacement`.
+
+    `marks` mirrors Terraform's `before_sensitive`/`after_sensitive`/`after_unknown`
+    shape: `True` marks the whole subtree, dicts/lists mirror `value`'s structure to
+    mark nested fields, and anything else (None, False, missing) leaves `value` as-is.
+    """
+    if marks is True:
+        return replacement
+    if isinstance(marks, dict) and isinstance(value, dict):
+        return {
+            key: _mask_marked_values(item, marks.get(key), replacement)
+            for key, item in value.items()
+        }
+    if isinstance(marks, list) and isinstance(value, list):
+        return [
+            _mask_marked_values(item, marks[index] if index < len(marks) else None, replacement)
+            for index, item in enumerate(value)
+        ]
+    return value
+
+
+def _mark_unknown_values(value: Any, marks: Any) -> Any:
+    """Replace planned values Terraform cannot know until apply with `UNKNOWN_MASK`."""
+    return _mask_marked_values(value, marks, UNKNOWN_MASK)
+
+
+def _changed_paths(before: Any, after: Any, prefix: str = "") -> List[str]:
+    """Return dotted/bracketed paths for every leaf that differs between before/after.
+
+    Examples: `allocated_storage`, `network_interface[0].private_ip`.
+    """
+    if isinstance(before, dict) or isinstance(after, dict):
+        before_dict = before if isinstance(before, dict) else {}
+        after_dict = after if isinstance(after, dict) else {}
+        paths = []
+        for key in sorted(set(before_dict) | set(after_dict)):
+            child_prefix = f"{prefix}.{key}" if prefix else key
+            paths.extend(_changed_paths(before_dict.get(key), after_dict.get(key), child_prefix))
+        return paths
+
+    if isinstance(before, list) or isinstance(after, list):
+        before_list = before if isinstance(before, list) else []
+        after_list = after if isinstance(after, list) else []
+        paths = []
+        for index in range(max(len(before_list), len(after_list))):
+            before_item = before_list[index] if index < len(before_list) else None
+            after_item = after_list[index] if index < len(after_list) else None
+            paths.extend(_changed_paths(before_item, after_item, f"{prefix}[{index}]"))
+        return paths
+
+    if before != after:
+        return [prefix] if prefix else []
+    return []
+
+
+def _marked_paths(marks: Any, prefix: str = "") -> List[str]:
+    """Return dotted/bracketed leaf paths where `marks` is True.
+
+    Used for `after_unknown`: a field can be marked unknown while its raw before/after
+    values are otherwise indistinguishable (e.g. both `None`), so this must be unioned
+    into `_changed_paths` rather than relying on a raw value diff alone.
+    """
+    if marks is True:
+        return [prefix] if prefix else []
+    if isinstance(marks, dict):
+        paths = []
+        for key, sub_marks in marks.items():
+            child_prefix = f"{prefix}.{key}" if prefix else key
+            paths.extend(_marked_paths(sub_marks, child_prefix))
+        return paths
+    if isinstance(marks, list):
+        paths = []
+        for index, sub_marks in enumerate(marks):
+            paths.extend(_marked_paths(sub_marks, f"{prefix}[{index}]"))
+        return paths
+    return []
+
+
+def _top_level_field(path: str) -> str:
+    """Extract the top-level field name from a changed path, e.g. `network_interface`
+    from `network_interface[0].private_ip`."""
+    for index, char in enumerate(path):
+        if char in ".[":
+            return path[:index]
+    return path
+
+
+def _only_changed_fields(value: Any, fields: set) -> Any:
+    """Reduce a dict to only the top-level keys that actually changed."""
+    if not isinstance(value, dict):
+        return value
+    return {key: item for key, item in value.items() if key in fields}
+
+
+def normalise_plan_change(change: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Normalise one Terraform `resource_changes[]` entry into scrubbed evidence.
+
+    Sensitive values are replaced with `SENSITIVE_MASK` and values Terraform cannot
+    know until apply are replaced with `UNKNOWN_MASK`. `delete`+`create` collapses to
+    a single `replace` action. No-op changes return `None` so callers can filter them
+    out before building bounded prompt evidence.
+
+    Returns a dict with `address`, `resource_type`, `action`, `changed_paths`,
+    `before`, and `after` (the latter two reduced to only the fields that changed).
+    """
+    details = change.get("change") or {}
+    actions = details.get("actions") or ["no-op"]
+
+    if set(actions) == {"delete", "create"}:
+        action = "replace"
+    else:
+        action = actions[0] if actions else "no-op"
+
+    if action == "no-op":
+        return None
+
+    raw_before = details.get("before")
+    raw_after = details.get("after")
+    # A field can be marked unknown-until-apply while its raw before/after values are
+    # otherwise indistinguishable (e.g. both None), so union in paths from after_unknown.
+    changed_paths = sorted(set(_changed_paths(raw_before, raw_after)) | set(_marked_paths(details.get("after_unknown"))))
+    changed_fields = {_top_level_field(path) for path in changed_paths}
+
+    masked_before = _mask_marked_values(raw_before, details.get("before_sensitive"), SENSITIVE_MASK)
+    masked_after = _mask_marked_values(raw_after, details.get("after_sensitive"), SENSITIVE_MASK)
+    masked_after = _mark_unknown_values(masked_after, details.get("after_unknown"))
+
+    return {
+        "address": change.get("address", "unknown"),
+        "resource_type": change.get("type", "unknown"),
+        "action": action,
+        "changed_paths": changed_paths,
+        "before": _only_changed_fields(masked_before, changed_fields),
+        "after": _only_changed_fields(masked_after, changed_fields),
+    }
+
+
+def summarise_report(markdown: str, mcp_status: str = "unknown") -> Dict[str, Any]:
+    """Extract deterministic automation metadata from report sections."""
+    sections = {}
+    current = None
+    for line in markdown.splitlines():
+        heading = re.match(r"^##\s+(.+?)\s*$", line)
+        numbered_heading = re.match(r"^\s*\d+\.\s+\*\*(.+?)\*\*\s*$", line)
+        matched_heading = heading or numbered_heading
+        if matched_heading:
+            current = re.sub(
+                r"\s*\([^)]*\)\s*$", "", matched_heading.group(1)
+            ).strip().lower()
+            sections[current] = []
+        elif current is not None:
+            sections[current].append(line)
+
+    def has_content(name: str) -> bool:
+        empty_values = {
+            "none", "none identified", "no findings", "no issues",
+            "no critical issues", "no warnings", "n/a", "not applicable",
+        }
+        for line in sections.get(name, []):
+            value = re.sub(r"^\s*(?:[-*+]\s+|#{3,6}\s+)", "", line).strip()
+            value = re.sub(r"[.*_`]+", "", value).strip().rstrip(".").lower()
+            if value and value not in empty_values and not value.startswith("no "):
+                return True
+        return False
+
+    finding_lines = [
+        line.strip()
+        for name, lines in sections.items()
+        if name not in {"summary", "quick reference table", "immediate actions"}
+        for line in lines
+        if re.match(r"^\s*(?:[-*+]\s+|#{3,6}\s+)", line)
+    ]
+    domain_has_critical = any(re.search(r"🔴\s*(?:critical)?", line, re.IGNORECASE) for line in finding_lines)
+    domain_has_warning = any(re.search(r"🟡\s*(?:warning)?", line, re.IGNORECASE) for line in finding_lines)
+
+    if has_content("critical issues") or domain_has_critical:
+        highest = "critical"
+    elif has_content("warnings") or domain_has_warning:
+        highest = "warning"
+    else:
+        highest = "none"
+    recommendation_lines = [
+        line for line in sections.get("recommendations", [])
+        if re.match(r"^\s*[-*+]\s+", line)
+    ]
+    recommendation_lines.extend(
+        line.strip()
+        for name, lines in sections.items()
+        if name != "recommendations"
+        for line in lines
+        if re.match(r"^\s*[-*+]\s+", line)
+        and re.search(r"🔵\s*(?:recommendation)?", line, re.IGNORECASE)
+    )
+    return {
+        "highest_severity": highest,
+        "has_issues": highest != "none",
+        "has_critical_issues": highest == "critical",
+        "recommendations_count": len(recommendation_lines),
+        "mcp_status": mcp_status,
+    }
+
+
+def severity_gate(summary: Dict[str, Any], threshold: str) -> bool:
+    """Return whether a completed report meets the configured failure threshold."""
+    if threshold == "none":
+        return False
+    if threshold == "warning":
+        return summary.get("highest_severity") in {"warning", "critical"}
+    if threshold == "critical":
+        return summary.get("highest_severity") == "critical"
+    raise ValueError("fail-on-severity must be one of: none, warning, critical")
+
+
+
 class TerraformAnalyser:
     """Main Terraform analysis class"""
     
@@ -577,29 +657,17 @@ class TerraformAnalyser:
         self.openai_client = self._init_openai_client()
     
     def _init_openai_client(self):
-        """Initialize AI client for Azure OpenAI or GitHub Models"""
-        try:
-            if self.config.ai_provider == 'github-models':
-                # GitHub Models using OpenAI-compatible API
-                from openai import OpenAI
-                return OpenAI(
-                    api_key=self.config.github_models_token,
-                    base_url="https://models.inference.ai.azure.com"
-                )
-            elif self.config.ai_provider == 'azure':
-                # Azure OpenAI
-                from openai import AzureOpenAI
-                return AzureOpenAI(
-                    api_key=self.config.azure_openai_api_key,
-                    api_version=self.config.azure_openai_api_version,
-                    azure_endpoint=self.config.azure_openai_endpoint
-                )
-            else:
-                raise ValueError(f"Unsupported AI provider: {self.config.ai_provider}. Only 'azure' and 'github-models' are supported.")
-        except ImportError:
-            print("Error: openai package not found. Please install with: pip install openai")
-            sys.exit(1)
-    
+        """Initialize the Microsoft Foundry OpenAI-compatible client."""
+        from openai import OpenAI
+        return OpenAI(
+            api_key=self.config.foundry_api_key,
+            base_url=f"{self.config.foundry_endpoint.rstrip('/')}/openai/v1/",
+            # Retry ownership belongs to analyse_with_ai.  Leaving the SDK default
+            # enabled silently multiplies a configured timeout and makes a single
+            # action attempt take several minutes.
+            max_retries=0,
+        )
+
     def _validate_path(self, path: str, base_dir: str = os.getcwd()) -> str:
         """Validate and resolve path to prevent traversal attacks (CWE-22)
         
@@ -615,11 +683,11 @@ class TerraformAnalyser:
         """
         # Resolve to absolute path
         if os.path.isabs(path):
-            abs_path = os.path.abspath(path)
+            abs_path = os.path.realpath(path)
         else:
-            abs_path = os.path.abspath(os.path.join(base_dir, path))
+            abs_path = os.path.realpath(os.path.join(base_dir, path))
         
-        abs_base = os.path.abspath(base_dir)
+        abs_base = os.path.realpath(base_dir)
         
         # Ensure path is within base directory
         if not abs_path.startswith(abs_base + os.sep) and abs_path != abs_base:
@@ -633,24 +701,25 @@ class TerraformAnalyser:
     def _validate_inputs(self) -> None:
         """Validate all configuration inputs to prevent injection attacks"""
         
-        # Validate AI provider
-        allowed_providers = ['azure', 'github-models']
-        if self.config.ai_provider not in allowed_providers:
-            raise ValueError(
-                f"Invalid AI provider '{self.config.ai_provider}'. "
-                f"Must be one of: {', '.join(allowed_providers)}"
-            )
-        
-        # Validate required credentials based on provider
-        if self.config.ai_provider == 'github-models':
-            if not self.config.github_models_token:
-                raise ValueError("GitHub Models token is required when using 'github-models' provider")
-        elif self.config.ai_provider == 'azure':
-            if not self.config.azure_openai_api_key:
-                raise ValueError("Azure OpenAI API key is required when using 'azure' provider")
-            if not self.config.azure_openai_endpoint:
-                raise ValueError("Azure OpenAI endpoint is required when using 'azure' provider")
-        
+        if self.config.ai_provider != 'foundry-openai':
+            raise ValueError("ai-provider must be foundry-openai")
+        if not self.config.foundry_api_key:
+            raise ValueError("Foundry API key is required")
+        if not self.config.foundry_endpoint:
+            raise ValueError("Foundry endpoint is required")
+        from urllib.parse import urlparse
+        endpoint = urlparse(self.config.foundry_endpoint)
+        if endpoint.scheme != 'https' or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
+            raise ValueError("Foundry endpoint must be an HTTPS URL without credentials, query, or fragment")
+        if not self.config.foundry_deployment:
+            raise ValueError("Foundry deployment is required")
+        if self.config.max_prompt_chars < 1000:
+            raise ValueError("max-prompt-chars must be at least 1000")
+        if not 1000 <= self.config.target_prompt_chars <= self.config.max_prompt_chars:
+            raise ValueError("target-prompt-chars must be between 1000 and max-prompt-chars")
+        if self.config.max_resources_per_request < 1:
+            raise ValueError("max-resources-per-request must be at least 1")
+
         # Validate paths (prevent path traversal)
         workspace_dir = os.getcwd()
         
@@ -727,11 +796,6 @@ class TerraformAnalyser:
         Returns:
             Scrubbed text with sensitive patterns redacted
         """
-        # Check if scrubbing is enabled (default: true for security)
-        if os.environ.get('SCRUB_SENSITIVE_DATA', 'true').lower() == 'false':
-            print("Warning: Sensitive data scrubbing is disabled", file=sys.stderr)
-            return data
-        
         # Patterns to redact (case-insensitive)
         patterns = [
             # Passwords
@@ -781,28 +845,29 @@ class TerraformAnalyser:
         
         return scrubbed_data
     
-    def read_terraform_files(self) -> Tuple[Dict[str, str], Dict[str, str]]:
-        """Read all Terraform files and detect changed files with size limits"""
+    def read_terraform_files(self) -> Dict[str, str]:
+        """Read all Terraform files under terraform_directory with size limits, in sorted
+        (deterministic) order"""
         all_tf_files = {}
-        changed_tf_files = {}
-        
+
         # Skip file reading in plan-only mode
         if self.config.analysis_mode == "plan-only":
             print("Plan-only mode: Skipping Terraform file reading")
-            return all_tf_files, changed_tf_files
-        
-        # File size limits (configurable via environment)
-        max_file_size = int(os.environ.get('MAX_FILE_SIZE_MB', '1')) * 1_000_000  # Default 1MB per file
-        max_total_size = int(os.environ.get('MAX_TOTAL_SIZE_MB', '10')) * 1_000_000  # Default 10MB total
+            return all_tf_files
+
+        # File size limits (configurable via environment; defaults match action.yml)
+        max_file_size = int(os.environ.get('MAX_FILE_SIZE_MB', '10')) * 1_000_000  # Default 10MB per file
+        max_total_size = int(os.environ.get('MAX_TOTAL_SIZE_MB', '50')) * 1_000_000  # Default 50MB total
         max_files = int(os.environ.get('MAX_FILES', '100'))  # Default 100 files
-        
+
         total_size = 0
         file_count = 0
-        
-        # Read all .tf files in the specified directory (already validated)
+
+        # Read all .tf files in the specified directory (already validated), in
+        # sorted order so the included file set is deterministic
         tf_pattern = os.path.join(self.config.terraform_directory, "**/*.tf")
-        
-        for tf_file in glob.glob(tf_pattern, recursive=True):
+
+        for tf_file in sorted(glob.glob(tf_pattern, recursive=True)):
             # Skip hidden files
             if os.path.basename(tf_file).startswith('.'):
                 continue
@@ -839,7 +904,9 @@ class TerraformAnalyser:
             # Read file
             try:
                 with open(validated_path, 'r', encoding='utf-8') as f:
-                    rel_path = os.path.relpath(validated_path, self.config.terraform_directory)
+                    rel_path = os.path.relpath(
+                        validated_path, os.path.realpath(self.config.terraform_directory)
+                    )
                     all_tf_files[rel_path] = f.read()
                     total_size += file_size
                     file_count += 1
@@ -847,28 +914,8 @@ class TerraformAnalyser:
                 print(f"Warning: Could not read {tf_file}: {e}", file=sys.stderr)
         
         print(f"Read {file_count} Terraform files ({total_size} bytes total)")
-        
-        # Read changed Terraform files if they exist
-        changed_dir = "changed_terraform"
-        if os.path.exists(changed_dir):
-            for tf_file in glob.glob(f"{changed_dir}/*.tf"):
-                filename = os.path.basename(tf_file)
-                try:
-                    # Validate path
-                    validated_path = self._validate_path(tf_file, changed_dir)
-                    
-                    # Check file size
-                    file_size = os.path.getsize(validated_path)
-                    if file_size > max_file_size:
-                        print(f"Warning: Skipping large changed file: {tf_file} ({file_size} bytes)", file=sys.stderr)
-                        continue
-                    
-                    with open(validated_path, 'r', encoding='utf-8') as f:
-                        changed_tf_files[filename] = f.read()
-                except Exception as e:
-                    print(f"Warning: Could not read changed file {tf_file}: {e}", file=sys.stderr)
-        
-        return all_tf_files, changed_tf_files
+
+        return all_tf_files
     
     def format_plan_changes(self, plan_data: Dict[str, Any]) -> Tuple[List[Dict], List[str], Dict[str, int]]:
         """Format plan changes for analysis"""
@@ -918,58 +965,55 @@ class TerraformAnalyser:
         
         return formatted_changes, list(resource_types), action_counts
     
-    def create_analysis_prompt(self, tf_files: Dict[str, str], changed_files: Dict[str, str], 
-                             plan_changes: List[Dict], resource_types: List[str], 
+    def create_analysis_prompt(self, tf_files: Dict[str, str], changed_files: Dict[str, str],
+                             plan_changes: List[Dict], resource_types: List[str],
                              action_counts: Dict[str, int], providers: List[str],
                              mcp_insights: Optional[Dict[str, Any]] = None) -> str:
-        """Create the analysis prompt for OpenAI with optional MCP insights integration and data scrubbing"""
-        
+        """Create the analysis prompt for OpenAI with optional MCP insights integration and data scrubbing
+
+        `plan_changes` is expected to be a list of changes already normalised by
+        `normalise_plan_change` (scrubbed of sensitive/unknown values, reduced to
+        changed fields only). `changed_files` is accepted for signature
+        compatibility but is no longer used: comprehensive mode always sources
+        evidence from `tf_files` (the full, sorted Terraform configuration).
+        """
+
         primary_provider = CloudProviderDetector.get_primary_provider(providers)
         provider_context = f"**Detected Providers:** {', '.join(providers) if providers else 'Unknown (plan-only mode)'}\n"
         provider_context += f"**Primary Provider:** {primary_provider.upper()}\n\n"
-        
+
         # Determine context based on analysis mode and available data
         if self.config.analysis_mode == "plan-only":
             context_description = "This analysis focuses on reviewing the Terraform plan JSON output only. Source files were not analysed for faster execution."
             tf_context = "### Analysis Mode: Plan-Only\n\n"
             tf_context += "**Note:** This analysis is based solely on the Terraform plan JSON. For more comprehensive analysis including source file review, use 'comprehensive' mode.\n\n"
-        elif changed_files:
-            context_description = "This comprehensive analysis reviews both the Terraform plan and the changed source files."
-            tf_context = "### Changed Terraform Files:\n\n"
-            for filename, content in changed_files.items():
-                # Scrub sensitive data from file content before adding to prompt
-                scrubbed_content = self._scrub_sensitive_data(content)
-                tf_context += f"**{filename}:**\n```hcl\n{scrubbed_content[:2000]}{'...' if len(scrubbed_content) > 2000 else ''}\n```\n\n"
         else:
             context_description = "This comprehensive analysis reviews both the Terraform plan and the overall configuration."
             tf_context = "### Terraform Configuration:\n\n"
-            for filepath, content in list(tf_files.items())[:5]:  # Limit to first 5 files
-                # Scrub sensitive data from file content before adding to prompt
+            for filepath, content in sorted(tf_files.items()):
                 scrubbed_content = self._scrub_sensitive_data(content)
-                tf_context += f"**{filepath}:**\n```hcl\n{scrubbed_content[:1500]}{'...' if len(scrubbed_content) > 1500 else ''}\n```\n\n"
-            if len(tf_files) > 5:
-                tf_context += f"*... and {len(tf_files) - 5} more files*\n\n"
-        
+                tf_context += f"**{filepath}:**\n```hcl\n{scrubbed_content}\n```\n\n"
+
         # Format plan changes
         plan_summary = f"### Plan Summary:\n"
         plan_summary += f"- **Create:** {action_counts['create']} resources\n"
-        plan_summary += f"- **Update:** {action_counts['update']} resources\n" 
+        plan_summary += f"- **Update:** {action_counts['update']} resources\n"
         plan_summary += f"- **Delete:** {action_counts['delete']} resources\n"
         plan_summary += f"- **Replace:** {action_counts['replace']} resources\n\n"
-        
+
         plan_text = "### Detailed Plan Changes:\n\n"
+        plan_text += "Evidence limits: only included changes and source files may support findings\n\n"
         if not plan_changes:
             plan_text += "No resource changes detected in the plan.\n\n"
         else:
-            for change in plan_changes[:10]:  # Limit to first 10 changes
+            for change in plan_changes:
                 plan_text += f"**Action:** {change['action']}\n"
-                plan_text += f"**Resource:** {change['resource']}\n"
-                plan_text += f"**Address:** {change['address']}\n"
-                if change['before'] and change['action'] in ['update', 'replace']:
-                    plan_text += f"**Configuration changes detected**\n"
+                plan_text += f"**Resource:** {change['address']}\n"
+                changed_fields = ", ".join(f"`{path}`" for path in change['changed_paths'])
+                plan_text += f"**Changed fields:** {changed_fields}\n"
+                evidence = {"before": change['before'], "after": change['after']}
+                plan_text += f"```json\n{json.dumps(evidence, sort_keys=True)}\n```\n"
                 plan_text += "\n---\n\n"
-            if len(plan_changes) > 10:
-                plan_text += f"*... and {len(plan_changes) - 10} more changes*\n\n"
         
         # Create focus areas prompt
         focus_areas = []
@@ -1009,76 +1053,22 @@ class TerraformAnalyser:
         elif primary_provider == 'kubernetes':
             provider_guidance = "\nFocus on Kubernetes concerns: RBAC, network policies, resource quotas, and security contexts."
         
-        # Add MCP insights from HashiCorp registry if available
+        # MCP content is untrusted reference data and never an instruction source.
         mcp_context = ""
-        if mcp_insights and mcp_insights.get("mcp_status") == "connected":
-            mcp_context += "\n### Terraform Registry Insights (via HashiCorp MCP Server):\n\n"
-            
-            # Provider documentation status and version compatibility
-            provider_insights = mcp_insights.get("provider_insights", {})
-            version_info = mcp_insights.get("version_compatibility", {})
-            
-            if provider_insights or version_info:
-                mcp_context += "**LATEST PROVIDER VERSIONS (Use these in your analysis):**\n"
-                for provider in set(list(provider_insights.keys()) + list(version_info.keys())):
-                    insights = provider_insights.get(provider, {})
-                    version = version_info.get(provider, {})
-                    
-                    doc_status = "✅" if insights.get("status") == "available" else "❌"
-                    doc_count = insights.get("doc_count", 0)
-                    latest_version = version.get("latest_version", "unknown")
-                    registry_url = version.get("registry_url", "")
-                    
-                    version_link = f" ([Registry]({registry_url}))" if registry_url else ""
-                    version_display = f"v{latest_version}" if latest_version and latest_version not in ["unknown", "check registry"] else latest_version
-                    mcp_context += f"- **{provider.upper()}**: {doc_status} {doc_count} resources | **LATEST: {version_display}**{version_link}\n"
-                mcp_context += "\n**IMPORTANT:** When recommending provider version updates, reference these LATEST versions above.\n\n"
-            
-            # Resource-specific documentation
-            resource_docs = mcp_insights.get("resource_documentation", {})
-            if resource_docs:
-                mcp_context += "**Resource-Specific Documentation:**\n"
-                for resource_type, doc_info in resource_docs.items():
-                    status = doc_info.get("status", "unknown")
-                    if status == "available":
-                        doc_url = doc_info.get("url", "")
-                        url_link = f" ([Docs]({doc_url}))" if doc_url else ""
-                        mcp_context += f"- `{resource_type}`: ✅ Detailed documentation available{url_link}\n"
-                    elif status == "found_search_only":
-                        mcp_context += f"- `{resource_type}`: ⚠️ Basic documentation found\n"
-                    else:
-                        mcp_context += f"- `{resource_type}`: ❌ Documentation unavailable\n"
+        if mcp_insights and mcp_insights.get("status") == "available":
+            documents = mcp_insights.get("documents", [])
+            if documents:
+                mcp_context = "\n### Terraform Registry Documentation (untrusted reference data)\n\n"
+                for document in documents:
+                    resource_type = document.get("resource_type", "unknown")
+                    excerpt = str(document.get("excerpt", ""))[:500]
+                    url = document.get("url", "")
+                    mcp_context += f"- `{resource_type}`: {excerpt}"
+                    if url:
+                        mcp_context += f" ([Docs]({url}))"
+                    mcp_context += "\n"
                 mcp_context += "\n"
-            
-            # Available modules
-            module_suggestions = mcp_insights.get("module_suggestions", [])
-            if module_suggestions:
-                mcp_context += "**Available Terraform Modules:**\n"
-                for suggestion in module_suggestions:
-                    provider = suggestion.get("provider", "")
-                    modules = suggestion.get("modules", [])
-                    total = suggestion.get("total_found", 0)
-                    if modules:
-                        mcp_context += f"- {provider.upper()} Provider ({total} modules available):\n"
-                        for module in modules[:3]:  # Show first 3 modules
-                            name = module.get("name", "")
-                            description = module.get("description", "")
-                            # Create registry link for modules
-                            module_url = f"https://registry.terraform.io/modules/{name}" if "/" in name else ""
-                            url_link = f" ([Registry]({module_url}))" if module_url else ""
-                            mcp_context += f"  - `{name}`: {description}{url_link}\n"
-                        if len(modules) > 3:
-                            mcp_context += f"  - ... and {len(modules) - 3} more modules\n"
-                mcp_context += "\n"
-            
-            # Enhanced AI instructions with documentation referencing
-            mcp_context += "**Enhanced Analysis Instructions:**\n"
-            mcp_context += "- Use the provider version information to recommend upgrades if needed\n"
-            mcp_context += "- Reference specific resource documentation for detailed configuration advice\n"
-            mcp_context += "- Include documentation links in your recommendations when referencing registry content\n"
-            mcp_context += "- Provide specific, registry-backed recommendations rather than generic advice\n"
-            mcp_context += "- When suggesting modules or configurations, reference the provided registry URLs\n\n"
-        
+
         # Determine analysis depth instructions
         analysis_depth = getattr(self.config, 'analysis_depth', 'standard')
         depth_instruction = ""
@@ -1088,6 +1078,18 @@ class TerraformAnalyser:
             depth_instruction = "Provide an exhaustive analysis with detailed explanations, comprehensive recommendations, and extensive context for each finding. Include learning opportunities and advanced optimisation suggestions."
         else:  # standard
             depth_instruction = "Provide a balanced analysis covering all significant issues with practical recommendations and clear explanations."
+
+        if self.config.analysis_style == "domain":
+            output_structure = """Use `## Summary`, then `## Quick Reference Table`, followed by level-two headings for each requested analysis domain. Start every finding with 🔴 Critical, 🟡 Warning, 🔵 Recommendation, or ✅ Good Practice. End with `## Immediate actions`."""
+        else:
+            output_structure = """Use these exact level-two headings:
+- `## Summary`
+- `## Quick Reference Table`
+- `## Critical Issues (🔴)`
+- `## Warnings (🟡)`
+- `## Recommendations (🔵)`
+- `## Good Practices (✅)`
+- `## Immediate actions`"""
 
         return f"""
 You are a senior DevOps and cloud infrastructure expert with extensive experience in Terraform, cloud security, and infrastructure best practices. {context_description}
@@ -1100,6 +1102,8 @@ You are a senior DevOps and cloud infrastructure expert with extensive experienc
 {provider_guidance}
 
 {mcp_context}
+
+**Review depth instruction:** {depth_instruction}
 
 ## ANALYSIS METHODOLOGY
 1. **Security Assessment**: Identify vulnerabilities, exposed resources, misconfigurations
@@ -1119,14 +1123,7 @@ You are a senior DevOps and cloud infrastructure expert with extensive experienc
 **Resource Types:** {', '.join(resource_types) if resource_types else 'None'}
 
 ## OUTPUT REQUIREMENTS
-Provide a structured analysis with:
-
-1. **Summary** - Key findings and overall risk assessment
-2. **Quick Reference Table** - Summary table with: Domain | Resources | Issue/Opportunity | Link
-3. **Critical Issues** (🔴) - Security vulnerabilities, breaking changes, data risks
-4. **Warnings** (🟡) - Suboptimal configurations, potential issues
-5. **Recommendations** (🔵) - Best practice improvements, optimisations
-6. **Good Practices** (✅) - Correctly configured items to acknowledge
+{output_structure}
 
 **QUICK REFERENCE TABLE FORMAT:**
 Include a markdown table after the summary with these columns:
@@ -1144,6 +1141,33 @@ For each finding:
 
 Be practical and specific rather than generic. Focus on actionable insights that will genuinely help improve the infrastructure.
 """
+
+    def build_prompt_batches(self, tf_files: Dict[str, str], plan_changes: List[Dict],
+                             resource_types: List[str], action_counts: Dict[str, int],
+                             providers: List[str], mcp_insights: Dict[str, Any]) -> List[str]:
+        """Pack all accepted resource evidence without exceeding public limits."""
+        batches: List[str] = []
+        current: List[Dict] = []
+        for change in plan_changes:
+            candidate = current + [change]
+            candidate_prompt = self.create_analysis_prompt(tf_files, {}, candidate, resource_types, action_counts, providers, mcp_insights)
+            if len(candidate) <= self.config.max_resources_per_request and len(candidate_prompt) <= self.config.target_prompt_chars:
+                current = candidate
+                continue
+            if not current:
+                if len(candidate_prompt) > self.config.max_prompt_chars:
+                    raise RuntimeError(f"A single resource evidence item exceeds max-prompt-chars ({self.config.max_prompt_chars})")
+                current = candidate
+                continue
+            batches.append(self.create_analysis_prompt(tf_files, {}, current, resource_types, action_counts, providers, mcp_insights))
+            current = [change]
+            if len(self.create_analysis_prompt(tf_files, {}, current, resource_types, action_counts, providers, mcp_insights)) > self.config.max_prompt_chars:
+                raise RuntimeError(f"A single resource evidence item exceeds max-prompt-chars ({self.config.max_prompt_chars})")
+        if current or not batches:
+            batches.append(self.create_analysis_prompt(tf_files, {}, current, resource_types, action_counts, providers, mcp_insights))
+        if any(len(prompt) > self.config.max_prompt_chars for prompt in batches):
+            raise RuntimeError("A packed review request exceeded max-prompt-chars")
+        return batches
     
     def load_system_prompt(self, prompt_type: str = 'severity') -> str:
         """Load system prompt from file"""
@@ -1179,47 +1203,34 @@ Group your findings by domain areas. Include severity levels: 🔴 Critical, �
 Provide detailed, actionable analysis focusing on security, best practices, and deployment safety.
 Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 Warning, 🔵 Recommendation, ✅ Good Practice"""
     
-    def analyse_with_ai(self, prompt: str) -> str:
-        """Analyse the Terraform plan using Azure OpenAI or GitHub Models with retry logic"""
+    def analyse_with_ai(self, prompt: str, max_completion_tokens: Optional[int] = None) -> str:
+        """Analyse the Terraform plan using Microsoft Foundry with retry logic."""
         # Scrub sensitive data from prompt before sending to AI
         scrubbed_prompt = self._scrub_sensitive_data(prompt)
         
         # Validate prompt size to avoid token limits
         prompt_length = len(scrubbed_prompt)
+        if prompt_length > self.config.max_prompt_chars:
+            raise RuntimeError(
+                f"Serialized review prompt is {prompt_length} characters, above max-prompt-chars "
+                f"({self.config.max_prompt_chars}). The review was not sent, so no resources were silently omitted."
+            )
         if prompt_length > 100000:  # Rough estimate for token limits
             print(f"Warning: Large prompt detected ({prompt_length} chars). Consider using plan-only mode for better performance.")
         
         # Determine model name based on provider
-        if self.config.ai_provider == 'github-models':
-            model_name = self.config.github_models_model
-        else:  # azure
-            model_name = self.config.azure_openai_deployment
+        model_name = self.config.foundry_deployment
         
         # Adjust parameters based on analysis depth (if configured)
         analysis_depth = getattr(self.config, 'analysis_depth', 'standard')
-        if analysis_depth == 'quick':
+        if max_completion_tokens is not None:
+            max_tokens = max_completion_tokens
+        elif analysis_depth == 'quick':
             max_tokens = 4000
-            temperature = 0.2
         elif analysis_depth == 'detailed':
             max_tokens = 12000
-            temperature = 0.05
         else:  # standard
             max_tokens = 8000
-            temperature = 0.1
-        
-        # Determine if we should use max_completion_tokens (GPT-5) or max_tokens (older models)
-        # GPT-5 uses max_completion_tokens instead of max_tokens
-        use_max_completion_tokens = False
-        if self.config.ai_provider == 'github-models':
-            github_model = getattr(self.config, 'github_models_model', 'gpt-4o')
-            # Check if it's GPT-5
-            if 'gpt-5' in github_model.lower():
-                use_max_completion_tokens = True
-        elif self.config.ai_provider == 'azure':
-            # Check Azure deployment name
-            deployment = getattr(self.config, 'azure_openai_deployment', 'gpt-4')
-            if 'gpt-5' in deployment.lower():
-                use_max_completion_tokens = True
         
         # Choose system message based on analysis style
         analysis_style = getattr(self.config, 'analysis_style', 'severity')
@@ -1228,8 +1239,17 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         system_content = self.load_system_prompt(analysis_style)
         
         # Retry configuration
-        max_retries = int(os.environ.get('API_MAX_RETRIES', '3'))
-        timeout_seconds = int(os.environ.get('API_TIMEOUT_SECONDS', '120'))
+        try:
+            max_retries = int(os.environ.get('API_MAX_RETRIES', '2'))
+            timeout_seconds = int(os.environ.get('API_TIMEOUT_SECONDS', '120'))
+        except ValueError as error:
+            raise ValueError(
+                "api-max-retries and api-timeout-seconds must be whole numbers"
+            ) from error
+        if max_retries < 1:
+            raise ValueError("api-max-retries must be at least 1")
+        if timeout_seconds < 1:
+            raise ValueError("api-timeout-seconds must be at least 1")
         
         last_error = None
         
@@ -1237,31 +1257,26 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
             try:
                 print(f"Calling AI API (attempt {attempt + 1}/{max_retries})...")
                 
-                # Build API parameters based on model version
-                api_params = {
-                    "model": model_name,
-                    "messages": [
+                response = self.openai_client.chat.completions.create(
+                    model=model_name,
+                    messages=[
                         {
                             "role": "system", 
                             "content": system_content
                         },
                         {"role": "user", "content": scrubbed_prompt}
                     ],
-                    "temperature": temperature,
-                    "presence_penalty": 0.1,  # Reduce repetition
-                    "frequency_penalty": 0.1,  # Encourage diverse language
-                    "timeout": timeout_seconds
-                }
+                    max_completion_tokens=max_tokens,
+                    timeout=timeout_seconds
+                )
                 
-                # Add the appropriate token parameter
-                if use_max_completion_tokens:
-                    api_params["max_completion_tokens"] = max_tokens
-                else:
-                    api_params["max_tokens"] = max_tokens
-                
-                response = self.openai_client.chat.completions.create(**api_params)
-                
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    finish_reason = getattr(response.choices[0], "finish_reason", "unknown")
+                    raise RuntimeError(
+                        f"Foundry returned an empty completion (finish_reason={finish_reason})"
+                    )
+                return content
                 
             except Exception as e:
                 last_error = e
@@ -1280,18 +1295,10 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
                     # Final attempt failed
                     print(f"Error: AI API failed after {max_retries} attempts: {safe_error}", file=sys.stderr)
         
-        # All retries failed
         safe_error = self._sanitize_error_message(str(last_error))
-        error_msg = f"## Analysis Error\n\n**AI API Error:** {safe_error}\n\n"
-        error_msg += f"**Attempts:** {max_retries}\n"
-        error_msg += f"**Provider:** {self.config.ai_provider}\n\n"
-        error_msg += "Please check your AI provider configuration and try again.\n\n"
-        error_msg += "**Troubleshooting:**\n"
-        error_msg += "- Verify your API credentials are correct\n"
-        error_msg += "- Check API quota and rate limits\n"
-        error_msg += "- Ensure network connectivity to AI service\n"
-        
-        return error_msg
+        raise RuntimeError(
+            f"AI API failed after {max_retries} attempts: {safe_error}"
+        ) from last_error
     
     def _sanitize_error_message(self, error_msg: str) -> str:
         """Remove sensitive information from error messages
@@ -1305,14 +1312,12 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         sanitized = error_msg
         
         # Remove API keys (various formats)
-        if self.config.azure_openai_api_key:
-            sanitized = sanitized.replace(self.config.azure_openai_api_key, '***REDACTED***')
-        if self.config.github_models_token:
-            sanitized = sanitized.replace(self.config.github_models_token, '***REDACTED***')
+        if self.config.foundry_api_key:
+            sanitized = sanitized.replace(self.config.foundry_api_key, '***REDACTED***')
         
         # Remove endpoints/URLs (may contain sensitive paths)
-        if self.config.azure_openai_endpoint:
-            sanitized = sanitized.replace(self.config.azure_openai_endpoint, '***REDACTED_ENDPOINT***')
+        if self.config.foundry_endpoint:
+            sanitized = sanitized.replace(self.config.foundry_endpoint, '***REDACTED_ENDPOINT***')
         
         # Remove file paths that may contain sensitive directory names
         sanitized = re.sub(r'/[a-zA-Z0-9/_-]+/terraform', '***/terraform', sanitized)
@@ -1322,6 +1327,21 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         sanitized = re.sub(r'\b[A-Za-z0-9]{32,}\b', '***REDACTED***', sanitized)
         
         return sanitized
+
+    def create_merge_prompt(self, batch_reports: List[str]) -> str:
+        """Ask Foundry for one concise report from complete internal evidence."""
+        evidence = "\n\n".join(
+            f"Evidence report {index}:\n{report}"
+            for index, report in enumerate(batch_reports, start=1)
+        )
+        prompt = (
+            "Produce one concise Terraform review from the evidence reports below. "
+            "Group repeated findings, retain affected resource addresses, and do not mention batches.\n\n"
+            + evidence
+        )
+        if len(prompt) > self.config.max_prompt_chars:
+            raise RuntimeError("Evidence reports exceed max-prompt-chars for the final merge")
+        return prompt
     
     def run_analysis(self) -> Dict[str, Any]:
         """Run the complete analysis"""
@@ -1339,23 +1359,29 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         # Read Terraform files (unless in plan-only mode)
         if self.config.analysis_mode == "comprehensive":
             print("Reading Terraform configuration files...")
-        all_tf_files, changed_tf_files = self.read_terraform_files()
-        
+        all_tf_files = self.read_terraform_files()
+
         # Detect cloud providers
         print("Detecting providers...")
         providers = CloudProviderDetector.detect_providers(all_tf_files, plan_data)
-        
-        # Format plan changes
+
+        # Format plan changes (counts/resource types) and build scrubbed, change-level
+        # evidence for the prompt (sensitive values redacted, unknown values masked)
         print("Analysing plan changes...")
-        plan_changes, resource_types, action_counts = self.format_plan_changes(plan_data)
-        
+        _, resource_types, action_counts = self.format_plan_changes(plan_data)
+        normalised_changes = [
+            normalised for normalised in (
+                normalise_plan_change(change) for change in plan_data.get('resource_changes', [])
+            ) if normalised is not None
+        ]
+
         # Get MCP insights if available
-        mcp_results = {}
+        mcp_results = {"status": "unavailable", "documents": [], "errors": ["Docker unavailable"]}
         if self.mcp_client:
             print("Getting insights from Terraform MCP server...")
             mcp_results = self.mcp_client.validate_plan_with_mcp(plan_data)
-            mcp_status = mcp_results.get("mcp_status", "unknown")
-            if mcp_status == "connected":
+            mcp_status = mcp_results.get("status", "unavailable")
+            if mcp_status == "available":
                 print("Connected to HashiCorp MCP server via stdio protocol")
 
             elif mcp_status == "unavailable":
@@ -1365,16 +1391,22 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
             else:
                 print(f"MCP server status: {mcp_status}")
         
-        # Create analysis prompt with MCP insights
-        prompt = self.create_analysis_prompt(
-            all_tf_files, changed_tf_files, plan_changes, 
-            resource_types, action_counts, providers,
-            mcp_insights=mcp_results  # Pass MCP insights to enhance AI analysis
+        prompts = self.build_prompt_batches(
+            all_tf_files, normalised_changes, resource_types, action_counts, providers, mcp_results
         )
-        
-        # Analyse with AI
+
+        # Analyse every batch. An error in any batch fails the whole review, so a
+        # partial report is never presented as full coverage.
         print("Analysing with AI...")
-        ai_analysis = self.analyse_with_ai(prompt)
+        analyses = []
+        for index, prompt in enumerate(prompts, start=1):
+            print(f"Reviewing evidence batch {index}/{len(prompts)}...")
+            analyses.append(self.analyse_with_ai(
+                prompt, max_completion_tokens=4000 if len(prompts) > 1 else None
+            ))
+        ai_analysis = analyses[0] if len(prompts) == 1 else self.analyse_with_ai(
+            self.create_merge_prompt(analyses), max_completion_tokens=12000
+        )
         
         # Combine results
         final_analysis = f"## Terraform AI Plan Analysis\n\n"
@@ -1383,178 +1415,88 @@ Group findings by severity level. Include severity levels: 🔴 Critical, 🟡 W
         final_analysis += f"**Analysis Focus:** {', '.join(self.config.analysis_focus)}\n\n"
         final_analysis += ai_analysis
         
-        # Add MCP validation results if available and show_mcp_details flag is enabled
-        if self.config.show_mcp_details and (mcp_results.get("validation_results") or mcp_results.get("provider_insights")):
-            final_analysis += "\n\n## HashiCorp MCP Server Analysis\n\n"
-            final_analysis += "_This section provides detailed MCP server diagnostics for troubleshooting._\n\n"
-            
-            # Connection status
-            mcp_status = mcp_results.get("mcp_status", "unknown")
-            status_emoji = {
-                "connected": "✅",
-                "failed": "❌",
-                "unavailable": "⚠️"
-            }.get(mcp_status, "❓")
-            final_analysis += f"**Connection Status:** {status_emoji} {mcp_status.replace('_', ' ').title()}\n\n"
-            
-            # Enhanced provider insights with version info
-            provider_insights = mcp_results.get("provider_insights", {})
-            version_info = mcp_results.get("version_compatibility", {})
-            
-            if provider_insights or version_info:
-                final_analysis += "### Provider Documentation & Version Status\n"
-                for provider in set(list(provider_insights.keys()) + list(version_info.keys())):
-                    insights = provider_insights.get(provider, {})
-                    version = version_info.get(provider, {})
-                    
-                    status = insights.get("status", "unknown")
-                    doc_count = insights.get("doc_count", 0)
-                    latest_version = version.get("latest_version", "unknown")
-                    registry_url = version.get("registry_url", "")
-                    
-                    if status == "available":
-                        version_link = f" | [Registry]({registry_url})" if registry_url else ""
-                        final_analysis += f"- **{provider.upper()}**: ✅ {doc_count} resources documented | Latest: v{latest_version}{version_link}\n"
-                    elif status == "limited":
-                        final_analysis += f"- **{provider.upper()}**: ⚠️ Limited documentation available | Latest: v{latest_version}\n"
-                    else:
-                        final_analysis += f"- **{provider.upper()}**: ❌ Documentation unavailable | Latest: v{latest_version}\n"
-                final_analysis += "\n"
-            
-            # Resource-specific documentation
-            resource_docs = mcp_results.get("resource_documentation", {})
-            if resource_docs:
-                final_analysis += "### Resource-Specific Documentation\n"
-                for resource_type, doc_info in resource_docs.items():
-                    status = doc_info.get("status", "unknown")
-                    if status == "available":
-                        doc_url = doc_info.get("url", "")
-                        url_link = f" | [Documentation]({doc_url})" if doc_url else ""
-                        final_analysis += f"- **`{resource_type}`**: ✅ Detailed documentation available{url_link}\n"
-                    elif status == "found_search_only":
-                        final_analysis += f"- **`{resource_type}`**: ⚠️ Basic documentation found\n"
-                    else:
-                        final_analysis += f"- **`{resource_type}`**: ❌ Documentation unavailable\n"
-                final_analysis += "\n"
-            
-            # Validation results
-            validation_results = mcp_results.get("validation_results", [])
-            if validation_results:
-                final_analysis += "### Validation Results\n"
-                for result in validation_results:
-                    status = result.get('status', 'unknown')
-                    emoji = "✅" if status == "pass" else "❌" if status == "fail" else "⚠️"
-                    final_analysis += f"{emoji} **{result.get('rule', 'Unknown Rule')}**: {result.get('message', 'No message')}\n"
-                final_analysis += "\n"
-            
-            # Module suggestions with links
-            module_suggestions = mcp_results.get("module_suggestions", [])
-            if module_suggestions:
-                final_analysis += "### Recommended Modules\n"
-                for suggestion in module_suggestions:
-                    provider = suggestion.get("provider", "")
-                    modules = suggestion.get("modules", [])
-                    total = suggestion.get("total_found", 0)
-                    
-                    if modules:
-                        final_analysis += f"**{provider.upper()} Provider** ({total} modules found):\n"
-                        for module in modules:
-                            name = module.get("name", "")
-                            description = module.get("description", "")
-                            # Create registry link for modules
-                            module_url = f"https://registry.terraform.io/modules/{name}" if "/" in name else ""
-                            url_link = f" | [Registry]({module_url})" if module_url else ""
-                            final_analysis += f"- [`{name}`]({module_url}): {description}{url_link}\n"
-                        final_analysis += "\n"
-            
-            # MCP recommendations
-            mcp_recommendations = mcp_results.get("recommendations", [])
-            if mcp_recommendations:
-                final_analysis += "### MCP Server Recommendations\n"
-                for rec in mcp_recommendations:
-                    final_analysis += f"- {rec}\n"
-        
-        # Create summary
-        has_critical_issues = any(word in ai_analysis.lower() for word in [
-            'critical', 'security risk', 'vulnerability', 'exposed', 'dangerous', 'insecure'
-        ])
-        
-        recommendations_count = ai_analysis.lower().count('recommend') + ai_analysis.lower().count('suggest')
-        
-        summary = {
-            "has_critical_issues": has_critical_issues,
-            "recommendations_count": recommendations_count,
+        mcp_status = mcp_results.get("status", "unavailable")
+        if mcp_status != "available":
+            errors = mcp_results.get("errors", [])
+            detail = errors[0] if errors else "Docker or the MCP server was unavailable"
+            final_analysis += f"\n\n> Documentation enrichment unavailable: {detail}. The review continues using Terraform plan evidence.\n"
+
+        summary = summarise_report(final_analysis, mcp_status=mcp_status)
+        summary.update({
             "providers_detected": providers,
-            "resource_changes": len(plan_changes),
+            "resource_changes": len(normalised_changes),
+            "reviewed_resource_changes": len(normalised_changes),
+            "review_batches": len(prompts),
+            "review_status": "complete",
+            "source_files_included": len(all_tf_files),
+            "source_files_omitted": 0,
             "action_counts": action_counts,
-            "mcp_status": mcp_results.get("mcp_status", "unknown"),
-            "mcp_validations": len(mcp_results.get("validation_results", [])),
-            "mcp_insights": len(mcp_results.get("provider_insights", {})),
-            "mcp_modules": len(mcp_results.get("module_suggestions", [])),
-            "mcp_resource_docs": len(mcp_results.get("resource_documentation", {})),
-            "mcp_version_checks": len(mcp_results.get("version_compatibility", {}))
-        }
-        
-        # Save results
-        with open('ai_analysis.md', 'w') as f:
+            "review_configuration": {
+                "analysis_preset": self.config.analysis_preset or "custom",
+                "analysis_focus": self.config.analysis_focus,
+                "analysis_mode": self.config.analysis_mode,
+                "analysis_depth": self.config.analysis_depth,
+                "analysis_style": self.config.analysis_style,
+                "fail_on_severity": self.config.fail_on_severity,
+                "request_strategy": "single-request" if len(prompts) == 1 else "size-packed",
+                "max_prompt_chars": self.config.max_prompt_chars,
+                "target_prompt_chars": self.config.target_prompt_chars,
+                "max_resources_per_request": self.config.max_resources_per_request,
+            },
+            "severity_gate_triggered": severity_gate(summary, self.config.fail_on_severity),
+        })
+
+        with open('ai_analysis.md', 'w', encoding='utf-8') as f:
             f.write(final_analysis)
-        
-        with open('analysis_summary.json', 'w') as f:
+        with open('analysis_summary.json', 'w', encoding='utf-8') as f:
             json.dump(summary, f, indent=2)
-        
+
         print("Analysis completed successfully!")
         return {"analysis": final_analysis, "summary": summary}
 
 
 def load_config_from_env() -> AnalysisConfig:
-    """Load configuration from environment variables"""
-    ai_provider = os.environ.get("AI_PROVIDER", "azure").lower()
-    
-    # Validate AI provider and required credentials
-    if ai_provider == "github-models":
-        if not os.environ.get("GITHUB_MODELS_TOKEN"):
-            print("ERROR: GITHUB_MODELS_TOKEN environment variable is required for GitHub Models", file=sys.stderr)
-            sys.exit(1)
-    elif ai_provider == "azure":
-        if not os.environ.get("AZURE_OPENAI_API_KEY"):
-            print("ERROR: AZURE_OPENAI_API_KEY environment variable is required for Azure OpenAI", file=sys.stderr)
-            sys.exit(1)
-        if not os.environ.get("AZURE_OPENAI_ENDPOINT"):
-            print("ERROR: AZURE_OPENAI_ENDPOINT environment variable is required for Azure OpenAI", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(f"ERROR: Unsupported AI provider '{ai_provider}'. Only 'azure' and 'github-models' are supported.", file=sys.stderr)
-        sys.exit(1)
-    
-    # Check if terraform plan exists
-    terraform_plan_path = os.environ.get("TERRAFORM_PLAN_PATH", "tfplan.json")
-    if not os.path.exists(terraform_plan_path):
-        print(f"ERROR: Terraform plan not found at: {terraform_plan_path}", file=sys.stderr)
-        print("Please ensure terraform plan has been run and the JSON output is available.", file=sys.stderr)
-        sys.exit(1)
-    
-    # Resolve analysis focus from preset or use explicit focus
-    analysis_focus = resolve_analysis_preset(
+    """Load and validate action configuration from environment variables."""
+    ai_provider = os.environ.get("AI_PROVIDER", "foundry-openai").lower()
+    if ai_provider != "foundry-openai":
+        raise ValueError("ai-provider must be foundry-openai")
+
+    plan_path = os.environ.get("TERRAFORM_PLAN_PATH", "tfplan.json")
+    if not os.path.exists(plan_path):
+        raise ValueError(f"Terraform plan not found at: {plan_path}")
+
+    fail_on_severity = os.environ.get("FAIL_ON_SEVERITY", "none").lower()
+    if fail_on_severity not in {"none", "warning", "critical"}:
+        raise ValueError("fail-on-severity must be one of: none, warning, critical")
+
+    analysis_depth = os.environ.get("ANALYSIS_DEPTH", "detailed").lower()
+    if analysis_depth not in {"quick", "standard", "detailed"}:
+        raise ValueError("analysis-depth must be one of: quick, standard, detailed")
+
+    analysis_mode = os.environ.get("ANALYSIS_MODE", "plan-only").lower()
+    analysis_style = os.environ.get("ANALYSIS_STYLE", "severity").lower()
+    focus = resolve_analysis_preset(
         os.environ.get("ANALYSIS_PRESET", ""),
-        os.environ.get("ANALYSIS_FOCUS", "security,cost,best-practices,deployment")
+        os.environ.get("ANALYSIS_FOCUS", "security,cost,best-practices,deployment"),
     )
-    
     return AnalysisConfig(
         ai_provider=ai_provider,
-        azure_openai_api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-        azure_openai_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-        azure_openai_api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01"),
-        azure_openai_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4"),
-        github_models_token=os.environ.get("GITHUB_MODELS_TOKEN"),
-        github_models_model=os.environ.get("GITHUB_MODELS_MODEL", "gpt-4o"),
-        terraform_plan_path=terraform_plan_path,
+        foundry_api_key=os.environ.get("FOUNDRY_API_KEY"),
+        foundry_endpoint=os.environ.get("FOUNDRY_ENDPOINT"),
+        foundry_deployment=os.environ.get("FOUNDRY_DEPLOYMENT"),
+        terraform_plan_path=plan_path,
         terraform_directory=os.environ.get("TERRAFORM_DIRECTORY", "."),
-        analysis_focus=analysis_focus.split(","),
-        analysis_mode=os.environ.get("ANALYSIS_MODE", "comprehensive"),
-        analysis_style=os.environ.get("ANALYSIS_STYLE", "severity"),
+        analysis_focus=focus.split(","),
+        analysis_preset=os.environ.get("ANALYSIS_PRESET", ""),
+        analysis_mode=analysis_mode,
+        analysis_depth=analysis_depth,
+        analysis_style=analysis_style,
+        fail_on_severity=fail_on_severity,
         mcp_available=os.environ.get("MCP_AVAILABLE", "false").lower() == "true",
         skip_mcp=os.environ.get("SKIP_MCP", "false").lower() == "true",
-        show_mcp_details=os.environ.get("SHOW_MCP_DETAILS", "false").lower() == "true"
+        max_prompt_chars=int(os.environ.get("MAX_PROMPT_CHARS", "120000")),
+        target_prompt_chars=int(os.environ.get("TARGET_PROMPT_CHARS", "100000")),
+        max_resources_per_request=int(os.environ.get("MAX_RESOURCES_PER_REQUEST", "100")),
     )
 
 
