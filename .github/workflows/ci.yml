@@ -1,53 +1,349 @@
-name: 'Build and Test'
+name: Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v5
-    
-    - name: Setup Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.13'
-    
-    - name: Create virtual environment and install dependencies
-      run: |
-        python -m venv venv
-        source venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov bandit
-    
-    - name: Check Python syntax
-      run: |
-        source venv/bin/activate
-        python -m py_compile analyse_terraform.py
-    
-    - name: Run unit tests
-      run: |
-        source venv/bin/activate
-        python -m pytest tests/ -v --cov=. --cov-report=term-missing
-    
-    - name: Validate action.yml
-      run: |
-        if [ ! -f action.yml ]; then
-          echo "::error::action.yml not found"
-          exit 1
-        fi
-        echo "✅ action.yml found"
-    
-    - name: Check for security issues
-      run: |
-        source venv/bin/activate
-        bandit -r . -ll -f json -o bandit-report.json --exclude ./venv,./tests 2>/dev/null || true
-        if [ -f bandit-report.json ]; then
-          echo "✅ Security scan completed"
-        fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/runtime.txt -r requirements/dev.txt
+      - name: Compile Python
+        run: python -m py_compile analyse_terraform.py
+      - name: Run Python tests
+        run: python -m unittest discover -v
+      - name: Run JavaScript tests
+        run: node --test tests/comment.test.js
+      - name: Validate action metadata
+        run: python -c "from tests.test_action import load_action_yaml; load_action_yaml()"
+      - name: Run blocking security scan
+        run: bandit -r analyse_terraform.py scripts -ll
+
+  multi-cloud-review:
+    name: Review ${{ matrix.name }} fixture
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      # The fixture jobs share one Foundry deployment. Serialise them so the
+      # evaluation measures the action rather than deployment contention.
+      max-parallel: 1
+      matrix:
+        include:
+          - slug: azure
+            name: Azure
+            plan: examples/terraform-plan-json/large_azure_plan.json
+          - slug: aws
+            name: AWS
+            plan: examples/terraform-plan-json/large_aws_plan.json
+          - slug: gcp
+            name: GCP
+            plan: examples/terraform-plan-json/large_gcp_plan.json
+          - slug: other
+            name: Other providers
+            plan: examples/terraform-plan-json/large_other_plan.json
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run rich review
+        uses: ./
+        with:
+          foundry-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          foundry-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          foundry-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          terraform-plan-path: ${{ matrix.plan }}
+          analysis-mode: plan-only
+          analysis-preset: complete
+          analysis-depth: standard
+          analysis-style: severity
+          fail-on-severity: none
+          disable-pr-comment: 'true'
+          github-token: ${{ github.token }}
+      - name: Validate review coverage
+        run: |
+          python - <<'PY'
+          import json
+          import os
+
+          with open('analysis_summary.json', encoding='utf-8') as summary_file:
+              summary = json.load(summary_file)
+          assert os.path.exists('ai_analysis.md'), 'AI report was not created'
+          assert isinstance(summary.get('resource_changes'), int), summary
+          PY
+      - name: Upload review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: multicloud-${{ matrix.slug }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ai_analysis.md
+            analysis_summary.json
+          if-no-files-found: warn
+          retention-days: 2
+
+  domain-comprehensive-review:
+    name: Review 100-resource Azure source and plan by domain
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: multi-cloud-review
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run domain comprehensive review
+        uses: ./
+        with:
+          foundry-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          foundry-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          foundry-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          terraform-plan-path: examples/terraform-plan-json/large_azure_100_resources_plan.json
+          terraform-directory: examples
+          analysis-mode: comprehensive
+          analysis-preset: complete
+          analysis-depth: detailed
+          analysis-style: domain
+          # This full source-and-plan fixture needs a longer single-request budget
+          # than the plan-only smoke fixtures.
+          api-timeout-seconds: '300'
+          # This is a real comprehensive fixture with complete source and plan
+          # evidence, rather than a reduced synthetic smoke test.
+          fail-on-severity: none
+          disable-pr-comment: 'true'
+          github-token: ${{ github.token }}
+      - name: Upload domain review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: domain-comprehensive-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ai_analysis.md
+            analysis_summary.json
+          if-no-files-found: warn
+          retention-days: 2
+
+  capability-review:
+    name: Review ${{ matrix.name }} capability fixture
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: domain-comprehensive-review
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - slug: security
+            name: Security audit
+            plan: examples/terraform-plan-json/large_aws_plan.json
+            directory: examples
+            preset: security-audit
+            mode: plan-only
+            depth: detailed
+            style: severity
+            timeout: '120'
+          - slug: cost
+            name: Cost optimisation
+            plan: examples/terraform-plan-json/large_aws_plan.json
+            directory: examples
+            preset: cost-optimisation
+            mode: plan-only
+            depth: standard
+            style: severity
+            timeout: '120'
+          - slug: production
+            name: Production readiness
+            plan: examples/terraform-plan-json/large_azure_plan.json
+            directory: examples
+            preset: production-ready
+            mode: comprehensive
+            depth: detailed
+            style: domain
+            timeout: '300'
+          - slug: quick
+            name: Quick CI check
+            plan: examples/terraform-plan-json/large_gcp_plan.json
+            directory: examples
+            preset: quick-check
+            mode: plan-only
+            depth: quick
+            style: severity
+            timeout: '120'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run capability review
+        uses: ./
+        with:
+          foundry-api-key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          foundry-endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          foundry-deployment: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          terraform-plan-path: ${{ matrix.plan }}
+          terraform-directory: ${{ matrix.directory }}
+          analysis-preset: ${{ matrix.preset }}
+          analysis-mode: ${{ matrix.mode }}
+          analysis-depth: ${{ matrix.depth }}
+          analysis-style: ${{ matrix.style }}
+          api-timeout-seconds: ${{ matrix.timeout }}
+          fail-on-severity: none
+          disable-pr-comment: 'true'
+          github-token: ${{ github.token }}
+      - name: Upload capability review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: capability-${{ matrix.slug }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ai_analysis.md
+            analysis_summary.json
+          if-no-files-found: warn
+          retention-days: 2
+
+  combine-multi-cloud-review:
+    name: Publish multi-cloud fixture review
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: [test, multi-cloud-review]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download reviews
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: multicloud-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: analyses
+      - name: Publish combined review
+        uses: actions/github-script@v8
+        env:
+          REVIEW_SCRIPT: ${{ github.workspace }}/scripts/comment.js
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { upsertReviewComment } = require(process.env.REVIEW_SCRIPT);
+            const marker = '<!-- terraform-ai-multicloud-review -->';
+            const labels = { azure: 'Azure', aws: 'AWS', gcp: 'GCP', other: 'Other providers' };
+            const sections = [];
+            if (fs.existsSync('analyses')) {
+              for (const entry of fs.readdirSync('analyses', { withFileTypes: true })) {
+                if (!entry.isDirectory()) continue;
+                const match = entry.name.match(/^multicloud-(azure|aws|gcp|other)-/);
+                const reportPath = path.join('analyses', entry.name, 'ai_analysis.md');
+                if (!match || !fs.existsSync(reportPath)) continue;
+                let report = fs.readFileSync(reportPath, 'utf8');
+                if (report.length > 14000) report = `${report.slice(0, 14000)}\n\n_Review truncated; download the workflow artifact for the complete report._`;
+                sections.push(`<details>\n<summary><strong>${labels[match[1]]} fixture review</strong></summary>\n\n${report}\n\n</details>`);
+              }
+            }
+            const body = [
+              '# Multi-cloud Terraform fixture review',
+              '',
+              sections.length ? sections.join('\n\n') : '_No fixture reports were produced. Check the matrix jobs for errors._',
+              '',
+              `Workflow run: [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
+            await upsertReviewComment({ github, context, body, marker });
+
+  publish-comprehensive-review:
+    name: Publish 100-resource Azure review
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: [domain-comprehensive-review]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download comprehensive review
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: domain-comprehensive-${{ github.run_id }}-${{ github.run_attempt }}
+          path: comprehensive
+      - name: Publish comprehensive review
+        uses: actions/github-script@v8
+        env:
+          REVIEW_SCRIPT: ${{ github.workspace }}/scripts/comment.js
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { upsertReviewComment } = require(process.env.REVIEW_SCRIPT);
+            const marker = '<!-- terraform-ai-azure-100-review -->';
+            const reportPath = path.join('comprehensive', 'ai_analysis.md');
+            let report = '_The comprehensive review did not produce a report. Check the review job for the failure._';
+            if (fs.existsSync(reportPath)) {
+              report = fs.readFileSync(reportPath, 'utf8');
+              if (report.length > 60000) report = `${report.slice(0, 60000)}\n\n_Review truncated at 60,000 characters; download the workflow artifact for the complete report._`;
+            }
+            const body = [
+              '# Azure comprehensive Terraform review — 100 resources',
+              '',
+              report,
+              '',
+              `Workflow run: [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
+            await upsertReviewComment({ github, context, body, marker });
+
+  publish-capability-review:
+    name: Publish capability fixture review
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    needs: [test, capability-review]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download capability reviews
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: capability-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: capabilities
+      - name: Publish capability review
+        uses: actions/github-script@v8
+        env:
+          REVIEW_SCRIPT: ${{ github.workspace }}/scripts/comment.js
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { upsertReviewComment, renderFixtureReview } = require(process.env.REVIEW_SCRIPT);
+            const marker = '<!-- terraform-ai-capability-review -->';
+            const labels = {
+              security: 'Security audit',
+              cost: 'Cost optimisation',
+              production: 'Production readiness',
+              quick: 'Quick CI check',
+            };
+            const sections = [];
+            if (fs.existsSync('capabilities')) {
+              for (const entry of fs.readdirSync('capabilities', { withFileTypes: true })) {
+                if (!entry.isDirectory()) continue;
+                const match = entry.name.match(/^capability-(security|cost|production|quick)-/);
+                const reportPath = path.join('capabilities', entry.name, 'ai_analysis.md');
+                const summaryPath = path.join('capabilities', entry.name, 'analysis_summary.json');
+                if (!match || !fs.existsSync(reportPath) || !fs.existsSync(summaryPath)) continue;
+                let report = fs.readFileSync(reportPath, 'utf8');
+                if (report.length > 14000) report = `${report.slice(0, 14000)}\n\n_Review truncated; download the workflow artifact for the complete report._`;
+                const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+                sections.push(renderFixtureReview({ label: labels[match[1]], report, summary }));
+              }
+            }
+            const body = [
+              '# Terraform AI capability fixtures',
+              '',
+              'These independent runs make each review preset and mode visible. The configuration table is the effective runtime configuration recorded by the action.',
+              '',
+              sections.length ? sections.join('\n\n') : '_No capability reports were produced. Check the matrix jobs for errors._',
+              '',
+              `Workflow run: [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
+            await upsertReviewComment({ github, context, body, marker });

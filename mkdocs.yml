@@ -1,0 +1,88 @@
+site_name: Terraform AI Plan Review
+site_description: Foundry-powered Terraform plan reviews for GitHub pull requests
+site_url: https://thomast1906.github.io/terraform-ai-review-action-privaterepo/
+repo_url: https://github.com/thomast1906/terraform-ai-review-action-privaterepo
+repo_name: thomast1906/terraform-ai-review-action-privaterepo
+edit_uri: edit/main/docs/
+nav:
+  - Home: index.md
+  - Get started:
+      - First review: getting-started.md
+      - Workflow recipes: examples.md
+  - User guide:
+      - Configuration:
+          - Complete reference: configuration.md
+          - Review modes and presets: review-options.md
+          - Outputs and severity policy: outputs.md
+      - Trust and safety:
+          - Security and privacy: security.md
+          - Fork pull requests: fork-pull-requests.md
+  - Help:
+      - Troubleshooting: troubleshooting.md
+      - Frequently asked questions: faq.md
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/cloud-search
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/thomast1906/terraform-ai-review-action-privaterepo
+      name: Terraform AI Plan Review on GitHub
+
+copyright: Copyright &copy; 2026 Thomas Thornton
