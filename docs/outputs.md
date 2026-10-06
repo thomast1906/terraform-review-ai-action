@@ -2,7 +2,7 @@
 
 ## Action outputs
 
-Assign an `id` to the action step to consume its outputs:
+Add an `id` to the action step to use its outputs:
 
 ```yaml
 - id: terraform-review
@@ -31,16 +31,16 @@ Assign an `id` to the action step to consume its outputs:
 
 ## Generated files
 
-The action writes two files in the job workspace:
+The action writes these two files in the job workspace:
 
 - `ai_analysis.md` — complete Markdown review
 - `analysis_summary.json` — compact machine-readable summary
 
-For a successful review, the summary includes plan-change counts, review-batch counts, source files included, action counts, MCP status, and the effective configuration. `review_batches` excludes a final consolidation request.
+After a successful review, the summary includes plan-change counts, review-batch counts, included source files, action counts, MCP status, and the effective configuration. `review_batches` does not include a final consolidation request.
 
-`ai_analysis.md` and `analysis_summary.json` are created only after a successful review. Use `if: always()` for artifact upload so any files produced before a later severity gate failure are retained.
+The action creates `ai_analysis.md` and `analysis_summary.json` only after a successful review. Set `if: always()` on the artifact upload step. This keeps the files if a later severity gate fails.
 
-Upload them when you want reports to remain available after a workflow run:
+Upload these files to keep the reports after a workflow run:
 
 ```yaml
 - name: Upload Terraform AI review
@@ -61,4 +61,4 @@ Upload them when you want reports to remain available after a workflow run:
 | `warning` | Warning or critical findings fail the action. |
 | `critical` | Only critical findings fail the action. |
 
-The report and summary are written before the gate runs. Use `if: always()` on artifact-upload steps so reports are retained when a gate fails.
+The action writes the report and summary before the gate runs. Set `if: always()` on artifact upload steps to keep reports when a gate fails.

@@ -2,11 +2,11 @@
 
 ## What does the action do?
 
-It analyses bounded Terraform plan and optional source evidence with a Microsoft Foundry model, writes a rich Markdown review, and can maintain one stable pull-request comment.
+The action analyzes bounded Terraform plan evidence and optional source files with a Microsoft Foundry model. It writes a detailed Markdown review and can maintain one stable pull-request comment.
 
 ## What is sent to Foundry?
 
-Included changed plan values and, in comprehensive mode, bounded Terraform source files. Terraform-sensitive values become `<redacted-sensitive>` and unknown values become `<unknown-until-apply>` before the request. The assembled prompt also receives pattern-based scrubbing; it is a safeguard, not a substitute for keeping secrets out of source evidence.
+Included changed plan values and, in comprehensive mode, bounded Terraform source files. Terraform-sensitive values become `<redacted-sensitive>` and unknown values become `<unknown-until-apply>` before the request. The action also checks the assembled prompt for patterns that match secrets. This step adds protection. Do not put secrets in source evidence.
 
 ## Does comprehensive mode review only changed files?
 
@@ -30,4 +30,4 @@ Yes. Set `disable-pr-comment: true`. You can then omit `github-token` and `pull-
 
 ## How do I reduce runtime and token usage?
 
-Use `analysis-mode: plan-only`, `analysis-depth: quick`, and `analysis-preset: quick-check`. Reduce source limits if comprehensive mode includes more context than required.
+Use `analysis-mode: plan-only`, `analysis-depth: quick`, and `analysis-preset: quick-check`. Reduce source limits if comprehensive mode includes more context than you need.

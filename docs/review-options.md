@@ -1,43 +1,43 @@
 # Review modes and presets
 
-Choose the review scope, focus, depth, organisation, and enforcement policy independently.
+Select the review scope, focus, depth, format, and severity policy.
 
 ## Analysis mode
 
 === "Comprehensive"
 
-    Reviews the Terraform plan and eligible `.tf` files below `terraform-directory`.
+    This mode reviews the Terraform plan and eligible `.tf` files below `terraform-directory`.
 
     ```yaml
     analysis-mode: comprehensive
     terraform-directory: terraform/production
     ```
 
-    Use this when source context is important to understanding modules, variables, provider configuration, or controls not fully represented in the plan.
+    Use this mode when source files help explain modules, variables, provider configuration, or controls that the plan does not fully show.
 
 === "Plan only"
 
-    Reviews only the JSON plan evidence.
+    This mode reviews only the JSON plan evidence.
 
     ```yaml
     analysis-mode: plan-only
     ```
 
-    Use this for faster feedback, lower token usage, or workflows where source should not be sent.
+    Use this mode for faster feedback, lower token use, or workflows that must not send source files.
 
 ## Analysis preset
 
 | Preset | Focus areas | Typical use |
 |---|---|---|
-| `quick-check` | Security, best practices | Fast feedback |
+| `quick-check` | Security, best practices | Fast review |
 | `security-audit` | Security, compliance, governance | Security review and critical gates |
-| `cost-optimisation` | Cost, performance, data | Cost-control reviews |
-| `production-ready` | Security, reliability, deployment, observability, performance | Pre-production review |
-| `complete` | All supported focus areas | Broad, detailed assessment |
+| `cost-optimisation` | Cost, performance, data | Cost review |
+| `production-ready` | Security, reliability, deployment, observability, performance | Review before production |
+| `complete` | All supported focus areas | Full review |
 
 ## Analysis depth
 
-- **`quick`** produces concise, high-level feedback.
+- **`quick`** produces short, general feedback.
 - **`standard`** balances detail, runtime, and token use.
 - **`detailed`** requests the most thorough review.
 
@@ -49,7 +49,7 @@ Choose the review scope, focus, depth, organisation, and enforcement policy inde
     analysis-style: severity
     ```
 
-    Organises findings into critical issues, warnings, recommendations, and good practices. This is usually the clearest format for pull-request decisions.
+    This style groups findings into critical issues, warnings, recommendations, and good practices. It gives clear information for pull-request decisions.
 
 === "Domain"
 
@@ -57,7 +57,7 @@ Choose the review scope, focus, depth, organisation, and enforcement policy inde
     analysis-style: domain
     ```
 
-    Organises findings by areas such as security, cost, reliability, networking, and governance.
+    This style groups findings by areas such as security, cost, reliability, network design, and governance.
 
 ## Recommended profiles
 
