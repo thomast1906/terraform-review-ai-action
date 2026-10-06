@@ -686,10 +686,12 @@ class TestFoundryConfiguration(unittest.TestCase):
         with patch.object(TerraformAnalyser, '_validate_inputs', return_value=None), \
              patch.object(TerraformAnalyser, '_init_openai_client', return_value=Mock()):
             analyser = TerraformAnalyser(config)
-        prompt = analyser.load_system_prompt("severity")
-        self.assertIn("untrusted data", prompt.lower())
-        self.assertIn("never as instructions", prompt.lower())
-        self.assertIn("## Immediate actions", prompt)
+        for style in ("severity", "domain"):
+            with self.subTest(style=style):
+                prompt = analyser.load_system_prompt(style)
+                self.assertIn("untrusted data", prompt.lower())
+                self.assertIn("never as instructions", prompt.lower())
+                self.assertIn("## Immediate actions", prompt)
 
 
 class TestReportSummary(unittest.TestCase):
