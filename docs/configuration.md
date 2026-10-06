@@ -17,14 +17,14 @@
 | `max-file-size-mb` | `10` | Maximum individual source file size. |
 | `max-total-size-mb` | `50` | Maximum combined source evidence size. |
 | `max-files` | `100` | Maximum source files included. |
-| `max-resources-per-request` | `100` | Maximum changed resources in one Foundry request. |
-| `target-prompt-chars` | `100000` | Target character budget used while packing evidence into requests. |
-| `max-prompt-chars` | `120000` | Hard maximum serialized character budget for one Foundry request. |
+| `max-resources-per-request` | `100` | Maximum number of changed resources in one Foundry request. |
+| `target-prompt-chars` | `100000` | Target character budget for evidence in each request. |
+| `max-prompt-chars` | `120000` | Maximum character count for one Foundry request. |
 
 !!! info
-    `plan-only` is the default because it sends only the plan delta, which is faster, cheaper, and has a smaller data boundary. `comprehensive` is opt-in and reads eligible `.tf` files below `terraform-directory`; it does not limit itself to files changed by the pull request.
+    `plan-only` is the default. It sends only the plan delta, so it is faster, costs less, and sends less data. `comprehensive` is optional. It reads eligible `.tf` files below `terraform-directory`. It does not limit source to files that the pull request changed.
 
-    The default 100,000/120,000-character target/hard prompt budgets suit larger trusted reviews, but must fit the context window of the selected Foundry deployment after allowing for the response. Increasing either budget can increase latency and token cost. A packing or API failure fails the action.
+    The default target and maximum prompt budgets are 100,000 and 120,000 characters. Make sure that the selected Foundry deployment has enough context capacity for the request and response. A larger budget can increase latency and token cost.     A request-size or API failure fails the action.
 
 ## Review controls
 
@@ -39,7 +39,7 @@
 ### Modes
 
 - **Plan-only** (default) reviews only plan evidence and usually uses fewer tokens.
-- **Comprehensive** reviews plan evidence and bounded Terraform source. Enable it only when the Foundry trust boundary and prompt budget are appropriate for the selected source tree.
+- **Comprehensive** reviews plan evidence and bounded Terraform source. Use it only when the Foundry trust boundary and prompt budget suit the source tree.
 
 ### Presets
 
@@ -54,7 +54,7 @@
 ### Styles
 
 - **Severity** groups findings as critical issues, warnings, recommendations, and good practices.
-- **Domain** groups findings by areas such as security, cost, reliability, and networking.
+- **Domain** groups findings by areas such as security, cost, reliability, and network design.
 
 ### Severity gates
 
@@ -64,7 +64,7 @@
 | `warning` | Warning or critical findings fail the action. |
 | `critical` | Only critical findings fail the action. |
 
-The report is written before the gate is enforced, so a failed job can still explain its findings.
+The action writes the report before it enforces the gate. A failed job can still show its findings.
 
 ## Commenting and API behaviour
 

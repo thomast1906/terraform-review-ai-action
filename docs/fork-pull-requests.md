@@ -1,26 +1,26 @@
 # Fork pull requests
 
-GitHub normally withholds repository secrets from workflows triggered by pull requests from forks. This protects Foundry credentials from untrusted code.
+GitHub normally withholds repository secrets from workflows that fork pull requests trigger. This protects Foundry credentials from untrusted code.
 
 ## Expected behaviour
 
-A workflow requiring `FOUNDRY_API_KEY` and `FOUNDRY_ENDPOINT` may be skipped or fail validation for a fork pull request because those secrets are unavailable.
+GitHub can skip a workflow or report an input error for a fork pull request. The workflow cannot access `FOUNDRY_API_KEY` or `FOUNDRY_ENDPOINT`.
 
 ## Safe approaches
 
-Choose a review process that matches your organisation's threat model:
+Use a review process that fits your organization's threat model:
 
-- Require a maintainer to reproduce the change on a trusted branch.
-- Run the AI review after trusted code is merged to an integration branch.
-- Use a manually approved environment containing the Foundry credentials.
-- Perform an unprivileged Terraform validation job first, then separately review trusted plan output.
+- Ask a maintainer to reproduce the change on a trusted branch.
+- Run the AI review after a maintainer merges trusted code into an integration branch.
+- Use a manually approved environment that contains the Foundry credentials.
+- Run an unprivileged Terraform validation job first. Then review the trusted plan output.
 
 ## Avoid privileged execution of untrusted code
 
 !!! danger
     Do not use `pull_request_target` to check out and execute an untrusted pull-request head while repository secrets or write permissions are available.
 
-Any workflow that runs `terraform init`, provider code, scripts, or repository-controlled commands should treat the pull-request contents as executable and untrusted.
+Treat pull-request content as executable and untrusted if a workflow runs `terraform init`, provider code, scripts, or repository-controlled commands.
 
 ## Permissions
 
@@ -39,4 +39,4 @@ permissions:
   contents: read
 ```
 
-Set `disable-pr-comment: true` and omit `github-token` when the workflow does not need to comment.
+Set `disable-pr-comment: true` and omit `github-token` if the workflow does not need a comment.

@@ -1,6 +1,6 @@
 # Examples
 
-Replace `<commit-sha>` in these examples with a revision you have reviewed.
+Replace `<commit-sha>` in these examples with a revision that you reviewed.
 
 ## Example review
 
@@ -10,11 +10,11 @@ Replace `<commit-sha>` in these examples with a revision you have reviewed.
 
 === "Azure critical finding"
 
-    ![Azure critical finding rendered by GitHub on PR 80](assets/pr80-azure-critical.png)
+    ![Azure critical issue shown by GitHub on PR 80](assets/pr80-azure-critical.png)
 
 === "Multi-provider critical finding"
 
-    ![Multi-provider critical finding rendered by GitHub on PR 80](assets/pr80-other-providers-critical.png)
+    ![Multi-provider critical issue shown by GitHub on PR 80](assets/pr80-other-providers-critical.png)
 
 Examples from [PR #80](https://github.com/thomast1906/terraform-review-ai-action/pull/80).
 
@@ -122,6 +122,6 @@ steps:
 ```
 
 !!! note
-    Disable individual comments in matrix jobs to avoid several jobs updating the same managed comment. Consume the outputs or upload each report as an artifact instead.
+    Disable individual comments in matrix jobs. This prevents comment conflicts between jobs. Use the outputs or upload each report as an artifact.
 
 Complete workflow files are also available in the repository's [`examples/workflows`](https://github.com/thomast1906/terraform-review-ai-action/tree/main/examples/workflows) directory.

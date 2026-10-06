@@ -1,9 +1,9 @@
 # Terraform AI Plan Review
 
-Turn Terraform plans into actionable pull-request feedback. Terraform AI Plan Review uses Microsoft Foundry to identify security, cost, reliability, and delivery risks, with resource addresses and changed-value evidence where available.
+Terraform AI Plan Review uses Microsoft Foundry to find security, cost, reliability, and delivery risks in Terraform plans. The review includes resource addresses and changed-value evidence when available.
 
-- One managed PR comment that updates on every run
-- Plan-only or comprehensive source-and-plan review
+- One managed PR comment that updates after each run
+- Plan-only review or comprehensive source-and-plan review
 - Presets for security, cost, production readiness, quick checks, and complete reviews
 - Markdown, JSON, and severity-gate outputs for CI
 
@@ -38,13 +38,13 @@ jobs:
           github-token: ${{ github.token }}
 ```
 
-Replace `<commit-sha>` with a revision you have reviewed. The runner needs Terraform and access to your Foundry deployment. Docker is needed only for optional MCP documentation enrichment.
+Replace `<commit-sha>` with a revision that you reviewed. The runner needs Terraform and access to your Foundry deployment. Docker is necessary only for optional MCP documentation enrichment.
 
 ## What is sent
 
-- Plan-only mode sends changed plan evidence.
-- Comprehensive mode also sends eligible `.tf` files under `terraform-directory`, subject to configured source limits.
-- Terraform-marked sensitive and unknown values are masked. Pattern-based scrubbing is an extra safeguard, not a guarantee that source has no secrets.
+- Plan-only mode sends evidence from changed plan values.
+- Comprehensive mode also sends eligible `.tf` files under `terraform-directory`, within the configured source limits.
+- The action masks Terraform-marked sensitive and unknown values. The action also checks for secret patterns, but this does not guarantee that source files contain no secrets.
 
 ## Next steps
 
@@ -54,4 +54,4 @@ Replace `<commit-sha>` with a revision you have reviewed. The runner needs Terra
 - [Security and privacy](security.md)
 - [Fork pull requests](fork-pull-requests.md)
 - [Outputs and severity policy](outputs.md)
-- [Troubleshooting](troubleshooting.md)
+- [Troubleshoot problems](troubleshooting.md)
