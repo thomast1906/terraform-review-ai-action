@@ -4,19 +4,23 @@ Replace `<commit-sha>` in these examples with a revision that you reviewed.
 
 ## Example review
 
-=== "Comment overview"
+These screenshots show review results from [PR #86](https://github.com/thomast1906/terraform-review-ai-action/pull/86).
 
-    ![Action-generated multi-cloud review comment from PR 80](assets/pr80-review-overview.png)
+=== "Azure summary"
 
-=== "Azure critical finding"
+    ![Azure review summary with issues, recommendations, and good practices](assets/pr86-azure-review-summary.png)
 
-    ![Azure critical issue shown by GitHub on PR 80](assets/pr80-azure-critical.png)
+=== "Azure quick reference"
 
-=== "Multi-provider critical finding"
+    ![Azure quick reference table with resources, issues, and documentation links](assets/pr86-azure-quick-reference.png)
 
-    ![Multi-provider critical issue shown by GitHub on PR 80](assets/pr80-other-providers-critical.png)
+=== "Azure PostgreSQL issue"
 
-Examples from [PR #80](https://github.com/thomast1906/terraform-review-ai-action/pull/80).
+    ![Critical issue for retired Azure PostgreSQL Single Server with impact and remediation steps](assets/pr86-azure-postgresql-critical.png)
+
+=== "AWS VPC issue"
+
+    ![Critical issue for inconsistent AWS VPC associations with resources, evidence, impact, and remediation steps](assets/pr86-aws-vpc-critical.png)
 
 ## Basic pull-request review
 

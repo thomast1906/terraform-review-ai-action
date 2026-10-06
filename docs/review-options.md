@@ -31,7 +31,7 @@ Select the review scope, focus, depth, format, and severity policy.
 |---|---|---|
 | `quick-check` | Security, best practices | Fast review |
 | `security-audit` | Security, compliance, governance | Security review and critical gates |
-| `cost-optimisation` | Cost, performance, data | Cost review |
+| `cost-optimisation` | Cost only | Cost review |
 | `production-ready` | Security, reliability, deployment, observability, performance | Review before production |
 | `complete` | All supported focus areas | Full review |
 
