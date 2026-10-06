@@ -176,7 +176,7 @@ jobs:
             directory: examples
             preset: quick-check
             mode: plan-only
-            depth: quick
+            depth: standard
             style: severity
             timeout: '120'
     steps:
