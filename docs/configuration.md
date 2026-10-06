@@ -47,7 +47,7 @@
 |---|---|
 | `quick-check` | Security and best practices |
 | `security-audit` | Security, compliance, and governance |
-| `cost-optimisation` | Cost, performance, and data |
+| `cost-optimisation` | Cost only |
 | `production-ready` | Security, reliability, deployment, observability, and performance |
 | `complete` | Every supported focus area |
 
